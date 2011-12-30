@@ -1,12 +1,18 @@
 #ifndef __SOCK_DIAG_H__
 #define __SOCK_DIAG_H__
-struct sk_buff;
-struct nlmsghdr;
+
+#include <linux/types.h>
+
+#define SOCK_DIAG_BY_FAMILY 20
 
 struct sock_diag_req {
 	__u8	sdiag_family;
 	__u8	sdiag_protocol;
 };
+
+#ifdef __KERNEL__
+struct sk_buff;
+struct nlmsghdr;
 
 struct sock_diag_handler {
 	__u8 family;
@@ -23,4 +29,5 @@ int sock_diag_check_cookie(void *sk, __u32 *cookie);
 void sock_diag_save_cookie(void *sk, __u32 *cookie);
 
 extern struct sock *sock_diag_nlsk;
+#endif /* KERNEL */
 #endif
