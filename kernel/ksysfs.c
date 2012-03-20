@@ -9,6 +9,7 @@
  */
 
 #include <linux/kobject.h>
+#include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/sysfs.h>
 #include <linux/export.h>
