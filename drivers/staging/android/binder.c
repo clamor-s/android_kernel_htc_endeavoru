@@ -289,7 +289,6 @@ struct binder_proc {
 	struct rb_root refs_by_node;
 	int pid;
 	struct vm_area_struct *vma;
-	struct mm_struct *vma_vm_mm;
 	struct task_struct *tsk;
 	struct files_struct *files;
 	struct hlist_node deferred_work_node;
@@ -447,7 +446,6 @@ static void task_fd_install(
 	fdt = files_fdtable(files);
 	BUG_ON(fdt->fd[fd] != NULL);
 	rcu_assign_pointer(fdt->fd[fd], file);
-	fdt->user[fd].installer = proc->pid;
 	spin_unlock(&files->file_lock);
 }
 
@@ -483,7 +481,6 @@ static long task_close_fd(struct binder_proc *proc, unsigned int fd)
 	if (!filp)
 		goto out_unlock;
 	rcu_assign_pointer(fdt->fd[fd], NULL);
-	fdt->user[fd].remover = proc->pid;
 	FD_CLR(fd, fdt->close_on_exec);
 	__put_unused_fd(files, fd);
 	spin_unlock(&files->file_lock);
@@ -637,7 +634,7 @@ static int binder_update_page_range(struct binder_proc *proc, int allocate,
 	if (mm) {
 		down_write(&mm->mmap_sem);
 		vma = proc->vma;
-		if (vma && mm != proc->vma_vm_mm) {
+		if (vma && mm != vma->vm_mm) {
 			pr_err("binder: %d: vma mm and task mm mismatch\n",
 				proc->pid);
 			vma = NULL;
@@ -2684,15 +2681,12 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	ret = wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
 	if (ret)
-	{
-		printk(KERN_ERR "binder_ioctl wait_event_interruptible() ERROR: ret=%d \n",ret);
 		return ret;
-	}
+
 	mutex_lock(&binder_lock);
 	thread = binder_get_thread(proc);
 	if (thread == NULL) {
 		ret = -ENOMEM;
-		printk(KERN_ERR "binder_ioctl ENOMEM ERROR: ret=%d \n",ret);
 		goto err;
 	}
 
@@ -2701,12 +2695,10 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		struct binder_write_read bwr;
 		if (size != sizeof(struct binder_write_read)) {
 			ret = -EINVAL;
-			printk(KERN_ERR "binder_ioctl BINDER_WRITE_READ ERROR: EINVAL ret=%d \n",ret);
 			goto err;
 		}
 		if (copy_from_user(&bwr, ubuf, sizeof(bwr))) {
 			ret = -EFAULT;
-			printk(KERN_ERR "binder_ioctl BINDER_WRITE_READ ERROR: EFAULT ret=%d \n",ret);
 			goto err;
 		}
 		binder_debug(BINDER_DEBUG_READ_WRITE,
@@ -2719,10 +2711,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			if (ret < 0) {
 				bwr.read_consumed = 0;
 				if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
-				{
 					ret = -EFAULT;
-					printk(KERN_ERR "binder_ioctl BINDER_WRITE_READ ERROR: EFAULT 2 ret=%d \n",ret);
-				}
 				goto err;
 			}
 		}
@@ -2732,10 +2721,7 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				wake_up_interruptible(&proc->wait);
 			if (ret < 0) {
 				if (copy_to_user(ubuf, &bwr, sizeof(bwr)))
-				{
 					ret = -EFAULT;
-					printk(KERN_ERR "binder_ioctl BINDER_WRITE_READ ERROR: EFAULT 3 ret=%d \n",ret);
-				}
 				goto err;
 			}
 		}
@@ -2745,7 +2731,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			     bwr.read_consumed, bwr.read_size);
 		if (copy_to_user(ubuf, &bwr, sizeof(bwr))) {
 			ret = -EFAULT;
-			printk(KERN_ERR "binder_ioctl BINDER_WRITE_READ ERROR: EFAULT 4 ret=%d \n",ret);
 			goto err;
 		}
 		break;
@@ -2753,14 +2738,13 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case BINDER_SET_MAX_THREADS:
 		if (copy_from_user(&proc->max_threads, ubuf, sizeof(proc->max_threads))) {
 			ret = -EINVAL;
-			printk(KERN_ERR "binder_ioctl BINDER_SET_MAX_THREADS ERROR: EFAULT ret=%d \n",ret);
 			goto err;
 		}
 		break;
 	case BINDER_SET_CONTEXT_MGR:
 		if (binder_context_mgr_node != NULL) {
+			printk(KERN_ERR "binder: BINDER_SET_CONTEXT_MGR already set\n");
 			ret = -EBUSY;
-			printk(KERN_ERR "binder: BINDER_SET_CONTEXT_MGR already set ret=%d\n", ret);
 			goto err;
 		}
 		ret = security_binder_set_context_mgr(proc->tsk);
@@ -2773,7 +2757,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				       current->cred->euid,
 				       binder_context_mgr_uid);
 				ret = -EPERM;
-				printk(KERN_ERR "binder_ioctl BINDER_SET_MAX_THREADS ERROR: EFAULT ret=%d \n",ret);
 				goto err;
 			}
 		} else
@@ -2781,7 +2764,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		binder_context_mgr_node = binder_new_node(proc, NULL, NULL);
 		if (binder_context_mgr_node == NULL) {
 			ret = -ENOMEM;
-			printk(KERN_ERR "binder_ioctl ENOMEM ERROR: BINDER_SET_CONTEXT_MGR ENOMEM ret=%d \n",ret);
 			goto err;
 		}
 		binder_context_mgr_node->local_weak_refs++;
@@ -2798,18 +2780,15 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case BINDER_VERSION:
 		if (size != sizeof(struct binder_version)) {
 			ret = -EINVAL;
-			printk(KERN_ERR "binder_ioctl BINDER_VERSION ERROR: EINVAL ret=%d \n",ret);
 			goto err;
 		}
 		if (put_user(BINDER_CURRENT_PROTOCOL_VERSION, &((struct binder_version *)ubuf)->protocol_version)) {
 			ret = -EINVAL;
-			printk(KERN_ERR "binder_ioctl BINDER_VERSION ERROR: EINVAL 2 ret=%d \n",ret);
 			goto err;
 		}
 		break;
 	default:
 		ret = -EINVAL;
-		printk(KERN_ERR "binder_ioctl default ERROR: EINVAL ret=%d \n",ret);
 		goto err;
 	}
 	ret = 0;
@@ -2842,7 +2821,6 @@ static void binder_vma_close(struct vm_area_struct *vma)
 		     (vma->vm_end - vma->vm_start) / SZ_1K, vma->vm_flags,
 		     (unsigned long)pgprot_val(vma->vm_page_prot));
 	proc->vma = NULL;
-	proc->vma_vm_mm = NULL;
 	binder_defer_work(proc, BINDER_DEFERRED_PUT_FILES);
 }
 
@@ -2925,7 +2903,6 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 	barrier();
 	proc->files = get_files_struct(proc->tsk);
 	proc->vma = vma;
-	proc->vma_vm_mm = vma->vm_mm;
 
 	/*printk(KERN_INFO "binder_mmap: %d %lx-%lx maps %p\n",
 		 proc->pid, vma->vm_start, vma->vm_end, proc->buffer);*/
