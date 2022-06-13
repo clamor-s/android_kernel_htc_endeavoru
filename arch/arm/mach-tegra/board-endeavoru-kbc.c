@@ -34,15 +34,15 @@
 #define ENDEAVORU_COL_COUNT	3
 
 static const u32 kbd_keymap[] = {
-	KEY(0, 0, KEY_POWER),
+	KEY(0, 0, KEY_ENTER),
 
 	KEY(1, 0, KEY_HOME),
 	KEY(1, 1, KEY_BACK),
-	KEY(1, 2, KEY_VOLUMEDOWN),
+	KEY(1, 2, KEY_DOWN),
 
 	KEY(2, 0, KEY_MENU),
 	KEY(2, 1, KEY_SEARCH),
-	KEY(2, 2, KEY_VOLUMEUP),
+	KEY(2, 2, KEY_UP),
 };
 
 static const struct matrix_keymap_data keymap_data = {

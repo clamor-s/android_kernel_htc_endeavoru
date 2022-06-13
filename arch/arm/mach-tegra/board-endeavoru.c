@@ -2055,9 +2055,9 @@ static int enrkey_wakeup() {
 }
 
 static struct gpio_keys_button ENDEAVORU_PROJECT_keys[] = {
-	[0] = GPIO_KEY(KEY_POWER, PU6, 1),
-	[1] = GPIO_KEY(KEY_VOLUMEUP, PS0, 0),
-	[2] = GPIO_KEY(KEY_VOLUMEDOWN, PW3, 0),
+	[0] = GPIO_KEY(KEY_ENTER, PU6, 1),
+	[1] = GPIO_KEY(KEY_UP, PS0, 0),
+	[2] = GPIO_KEY(KEY_DOWN, PW3, 0),
  };
 
 static struct gpio_keys_platform_data ENDEAVORU_PROJECT_keys_platform_data = {
