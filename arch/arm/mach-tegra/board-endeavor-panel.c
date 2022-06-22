@@ -59,7 +59,6 @@ static struct regulator *v_lcmio_1v8 = NULL;
 
 static struct regulator *endeavor_hdmi_reg = NULL;
 static struct regulator *endeavor_hdmi_pll = NULL;
-static struct regulator *endeavor_hdmi_vddio = NULL;
 #endif
 
 #define LCM_TE			TEGRA_GPIO_PJ1
@@ -92,24 +91,8 @@ static struct gpio panel_init_gpios[] = {
     {MHL_3V3_EN,    GPIOF_OUT_INIT_HIGH,    "mhl_3v3_en"},
 };
 
-static struct gpio endeavor_gpios[] = {
-	{MHL_1V2_EN,	GPIOF_OUT_INIT_LOW,	"mhl_1v2_en"},
-	{MHL_3V3_EN,	GPIOF_OUT_INIT_LOW,	"mhl_3v3_en"},
-};
-
-static atomic_t sd_brightness = ATOMIC_INIT(255);
-
 /*global varible for work around*/
 static bool g_display_on = true;
-
-static void mhl_gpio_switch(int on)
-{
-	int i = 0;
-	for(i = 0 ; i < ARRAY_SIZE(endeavor_gpios) ; i++)
-		gpio_set_value(endeavor_gpios[i].gpio, on);
-}
-
-static bool kernel_1st_panel_init = true;
 
 #define BACKLIGHT_MAX 255
 
@@ -155,8 +138,6 @@ static unsigned char shrink_pwm(int val)
 
 static int endeavor_backlight_notify(struct device *unused, int brightness)
 {
-	int cur_sd_brightness = atomic_read(&sd_brightness);
-
 	if (brightness > 0)
 		brightness = shrink_pwm(brightness);
 
@@ -275,25 +256,12 @@ static struct resource endeavor_disp2_resources[] = {
 		.end	= TEGRA_DISPLAY2_BASE + TEGRA_DISPLAY2_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
-#if 0
-	{
-		.name	= "fbmem",
-		.flags	= IORESOURCE_MEM,
-		.start	= 0,
-		.end	= 0,
-	},
-#endif
 	{
 		.name	= "hdmi_regs",
 		.start	= TEGRA_HDMI_BASE,
 		.end	= TEGRA_HDMI_BASE + TEGRA_HDMI_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
-};
-
-static struct tegra_dc_sd_settings endeavor_sd_settings = {
-	.enable = 0, /* Normal mode operation */
-	.bl_device = &endeavor_disp1_backlight_device,
 };
 
 static struct tegra_fb_data endeavor_hdmi_fb_data = {
@@ -335,6 +303,7 @@ static int endeavor_dsi_panel_enable(void)
 	/*TODO the power-on sequence move to bridge_reset*/
 	return 0;
 }
+
 static int bridge_reset(void)
 {
 	int err = 0;
@@ -569,7 +538,6 @@ static u8 init_cmd[] = {0xB9,0xFF,0x83,0x92};
 static u8 eq_cmd[] = {0xD5,0x00,0x00,0x02};
 static u8 ptbf_cmd[] = {0xBF,0x05,0x60,0x02};
 static u8 pwm_freq_hx[] = {0xC9,0x1F,0x01};
-static u8 porch[] = {0x3B,0x03,0x03,0x07,0x02,0x02};
 static u8 flash_issue[] = {0xC6,0x35,0x00,0x00,0x04};
 static u8 dsi_set[] = {0xBA,0x11,0x83,0x00,0xD6,0xC6,0x00,0x0A};
 static u8 stba[] = {0xC0,0x01,0x94};
@@ -4118,9 +4086,10 @@ struct early_suspend endeavor_panel_onchg_suspender;
 
 static void endeavor_panel_early_suspend(struct early_suspend *h)
 {
+	struct backlight_device *bl = platform_get_drvdata(&endeavor_disp1_backlight_device);
+
 	DISP_INFO_IN();
 
-	struct backlight_device *bl = platform_get_drvdata(&endeavor_disp1_backlight_device);
 	if (bl && bl->props.bkl_on) {
 		bl->props.bkl_on = 0;
 		del_timer_sync(&bkl_timer);
@@ -4138,22 +4107,25 @@ static void endeavor_panel_early_suspend(struct early_suspend *h)
 
 static void endeavor_panel_late_resume(struct early_suspend *h)
 {
+	int i;
+
 	DISP_INFO_IN();
 
-	unsigned i;
 	for (i = 0; i < num_registered_fb; i++)
 		fb_blank(registered_fb[i], FB_BLANK_UNBLANK);
 
 	mod_timer(&bkl_timer, jiffies + msecs_to_jiffies(50));
+
 	DISP_INFO_OUT();
 }
 
 #ifdef CONFIG_HTC_ONMODE_CHARGING
 static void endeavor_panel_onchg_suspend(struct early_suspend *h)
 {
+	struct backlight_device *bl = platform_get_drvdata(&endeavor_disp1_backlight_device);
+
 	DISP_INFO_IN();
 
-	struct backlight_device *bl = platform_get_drvdata(&endeavor_disp1_backlight_device);
 	if (bl && bl->props.bkl_on) {
 		bl->props.bkl_on = 0;
 		del_timer_sync(&bkl_timer);
@@ -4170,11 +4142,11 @@ static void endeavor_panel_onchg_suspend(struct early_suspend *h)
 static void endeavor_panel_onchg_resume(struct early_suspend *h)
 {
 	DISP_INFO_IN();
-	unsigned i;
 
 	fb_blank(registered_fb[0], FB_BLANK_UNBLANK);
 
 	mod_timer(&bkl_timer, jiffies + msecs_to_jiffies(50));
+
 	DISP_INFO_OUT();
 }
 #endif /* onmode charge */
@@ -4185,6 +4157,8 @@ int __init endeavor_panel_init(void)
 	int err;
 	struct resource __maybe_unused *res;
 	struct board_info board_info;
+	int i = 0;
+	int pin_count = ARRAY_SIZE(panel_init_gpios);
 
 	DISP_INFO_IN();
 
@@ -4193,8 +4167,7 @@ int __init endeavor_panel_init(void)
 		DISP_ERR("gpio request failed\n");
 		goto failed;
 	}
-	int i = 0;
-	int pin_count = ARRAY_SIZE(panel_init_gpios);
+
 	for (i = 0; i < pin_count; i++) {
 		tegra_gpio_enable(panel_init_gpios[i].gpio);
 	}
