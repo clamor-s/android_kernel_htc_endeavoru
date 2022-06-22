@@ -62,40 +62,9 @@
 
 #define SENSOR_MPU_NAME "mpu3050"
 
-static struct regulator *v_ps_2v85_en ;
-static struct regulator *v_srio_1v8_en ;
-
-static void cm3629_enable_power(int enable)
-{
-	if(enable == 1) {
-		if (v_ps_2v85_en == NULL) {
-			v_ps_2v85_en = regulator_get(NULL, "v_ps_2v85");
-				if (WARN_ON(IS_ERR(v_ps_2v85_en))) {
-				pr_err("[v_ps_2v85] %s: couldn't get regulator v_ps_2v85_en: %ld\n", __func__, PTR_ERR(v_ps_2v85_en));
-			}
-		}
-		regulator_enable(v_ps_2v85_en);
-
-		if (v_srio_1v8_en == NULL) {
-	  		v_srio_1v8_en = regulator_get(NULL, "v_srio_1v8");
-	  		if (WARN_ON(IS_ERR(v_srio_1v8_en))) {
-				pr_err("[v_srio_1v8] %s: couldn't get regulator v_srio_1v8_en: %ld\n", __func__, PTR_ERR(v_srio_1v8_en));
-			}
-		}
-		regulator_enable(v_srio_1v8_en);
-	}else if(enable == 0) {
-		if(regulator_is_enabled(v_srio_1v8_en)) {
-			regulator_disable(v_srio_1v8_en);
-		}
-		if(regulator_is_enabled(v_ps_2v85_en)) {
-			regulator_disable(v_ps_2v85_en);
-		}
-	}
-}
-
 static struct cm3628_platform_data cm3628_pdata = {
 	/*.intr = PSNENOR_INTz,*/
-	.pwr = NULL,
+	.pwr = 0,
 	.intr = TEGRA_GPIO_PK2,
 	.levels = { 12, 14, 16, 41, 83, 3561, 6082, 6625, 7168, 65535},
 	.golden_adc = 0x1145,
@@ -237,84 +206,6 @@ static struct i2c_board_info i2c_akm8975_devices_xc[] = {
 	},
 };
 
-static struct mpu3050_platform_data mpu3050_data = {
-	.int_config  = 0x10,
-	/* Orientation matrix for MPU on endeavoru */
-	  .en_1v8 = 1,
-	 // .orientation = { 0, 1, 0, 1, 0, 0, 0, 0, -1 }, // EVT
-	  .orientation = { 1, 0, 0, 0, -1, 0, 0, 0, -1 }, // EVT
-	  .level_shifter = 0,
-
-	.accel = {
-		.get_slave_descr = get_accel_slave_descr,
-		.adapt_num   = 0,
-		.bus         = EXT_SLAVE_BUS_SECONDARY,
-		//.address     = 0x0F,
-		.address     = 0x19, //for A-project
-		/* Orientation matrix for Kionix on endeavoru */
-		.orientation = { 1, 0, 0, 0, 1, 0, 0, 0, 1 }, // EVT .orientation = { -1, 0, 0, 0, 1, 0, 0, 0,-1 }, // EVT
-
-	},
-
-	.compass = {
-		.get_slave_descr = get_compass_slave_descr,
-		.adapt_num   = 0,
-		.bus         = EXT_SLAVE_BUS_PRIMARY,
-		//.address     = 0x0C,
-		.address     = 0x0D,//for A-project
-		/* Orientation matrix for AKM on endeavoru */
-		.orientation = { 1, 0, 0, 0, 1, 0, 0, 0, 1 }, // EVT
-	},
-};
-
-static struct i2c_board_info __initdata mpu3050_i2c0_boardinfo[] = {
-	{
-		I2C_BOARD_INFO(SENSOR_MPU_NAME, 0x68),
-		//.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PH4),
-		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PS0),
-		.platform_data = &mpu3050_data,
-	},
-};
-
-static struct mpu3050_platform_data mpu3050_data_xb = {
-        .int_config  = 0x10,
-        /* Orientation matrix for MPU on endeavoru */
-          .en_1v8 = 1,
-         // .orientation = { 0, 1, 0, 1, 0, 0, 0, 0, -1 }, // EVT
-          .orientation = { 1, 0, 0, 0, -1, 0, 0, 0, -1 }, // EVT
-          .level_shifter = 0,
-
-        .accel = {
-                .get_slave_descr = get_accel_slave_descr,
-                .adapt_num   = 0,
-                .bus         = EXT_SLAVE_BUS_SECONDARY,
-                //.address     = 0x0F,
-                .address     = 0x19, //for A-project
-                /* Orientation matrix for Kionix on endeavoru */
-                .orientation = { 1, 0, 0, 0, 1, 0, 0, 0, 1 }, // EVT .orientation = { -1, 0, 0, 0, 1, 0, 0, 0,-1 }, // EVT
-
-        },
-
-        .compass = {
-                .get_slave_descr = get_compass_slave_descr,
-                .adapt_num   = 0,
-                .bus         = EXT_SLAVE_BUS_PRIMARY,
-                //.address     = 0x0C,
-                .address     = 0x0D,//for A-project
-                /* Orientation matrix for AKM on endeavoru */
-                .orientation = { 1, 0, 0, 0, 1, 0, 0, 0, 1 }, // EVT
-        },
-};
-
-static struct i2c_board_info __initdata mpu3050_i2c0_boardinfo_xb[] = {
-        {
-                I2C_BOARD_INFO(SENSOR_MPU_NAME, 0x68),
-                //.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PH4),
-                .irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PJ2),
-                .platform_data = &mpu3050_data_xb,
-        },
-};
-
 static void config_nfc_gpios(void)
 {
     int ret = 0;
@@ -373,8 +264,6 @@ static void endeavoru_nfc_init(void)
     i2c_register_board_info(0, pn544_i2c_boardinfo,
             ARRAY_SIZE(pn544_i2c_boardinfo));
 }
-
-
 
 static int nct_get_temp(void *_data, long *temp)
 {
@@ -486,30 +375,6 @@ static inline void endeavoru_msleep(u32 t)
 	usleep_range(t*1000, t*1000 + 500);
 }
 
-static struct i2c_board_info endeavoru_i2c0_isl_board_info[] = {
-	{
-		I2C_BOARD_INFO("isl29028", 0x44),
-	}
-};
-
-static void endeavoru_isl_init(void)
-{
-	i2c_register_board_info(0, endeavoru_i2c0_isl_board_info,
-				ARRAY_SIZE(endeavoru_i2c0_isl_board_info));
-}
-
-static struct pca954x_platform_mode endeavoru_pca954x_modes[] = {
-	{ .adap_id = PCA954x_I2C_BUS0, .deselect_on_exit = true, },
-	{ .adap_id = PCA954x_I2C_BUS1, .deselect_on_exit = true, },
-	{ .adap_id = PCA954x_I2C_BUS2, .deselect_on_exit = true, },
-	{ .adap_id = PCA954x_I2C_BUS3, .deselect_on_exit = true, },
-};
-
-static struct pca954x_platform_data endeavoru_pca954x_data = {
-	.modes    = endeavoru_pca954x_modes,
-	.num_modes      = ARRAY_SIZE(endeavoru_pca954x_modes),
-};
-
 struct endeavoru_battery_gpio {
 	int gpio;
 	const char *label;
@@ -587,10 +452,7 @@ __setup("mbat_in_check=", check_mbat_in_tag);
 
 static void endeavoru_battery_init(void)
 {
-	int ret;
-	int i;
-
-	int project_phase = htc_get_pcbid_info();
+	int ret, i;
 
 	for (i = 0; i < ARRAY_SIZE(endeavoru_battery_gpio_data); i++) {
 		ret = gpio_request(endeavoru_battery_gpio_data[i].gpio,
@@ -766,39 +628,35 @@ int __init endeavoru_sensors_init(void)
 	int ret = 0;
 	int board_id = 0;
 	board_id = htc_get_pcbid_info();
-#if 0
-	endeavoru_isl_init();
-#endif
 
 	endeavoru_nct1008_init();
+
 	//Motion Sensor init
 	endeavoru_comp_irq_init();
 	endeavoru_gsensor_irq_init(); 
 	endeavoru_mpuirq_init();
 
 	endeavoru_gyro_diag_init();
+
 	i2c_register_board_info(0,
 		pana_gyro_GSBI12_boardinfo, ARRAY_SIZE(pana_gyro_GSBI12_boardinfo));
 	i2c_register_board_info(0,
 		i2c_bma250_devices, ARRAY_SIZE(i2c_bma250_devices));
-		if (htc_get_pcbid_info() < PROJECT_PHASE_XC )
-			i2c_register_board_info(0,
-				i2c_akm8975_devices_xb, ARRAY_SIZE(i2c_akm8975_devices_xb));
 
-		else
-			i2c_register_board_info(0,
+	if (htc_get_pcbid_info() < PROJECT_PHASE_XC)
+		i2c_register_board_info(0,
+			i2c_akm8975_devices_xb, ARRAY_SIZE(i2c_akm8975_devices_xb));
+	else
+		i2c_register_board_info(0,
 			i2c_akm8975_devices_xc, ARRAY_SIZE(i2c_akm8975_devices_xc));
 	
 	endeavoru_gyro_sleep_pin();
 
-
 	psensor_init();
-	if ((board_id >= PROJECT_PHASE_A) && ((engineer_id & 0x08) == 0))
-		endeavoru_nfc_init();
-	else if (board_id < PROJECT_PHASE_A)
-		endeavoru_nfc_init();
+	endeavoru_nfc_init();
 
 	endeavoru_battery_init();
+
 	return ret;
 }
 
