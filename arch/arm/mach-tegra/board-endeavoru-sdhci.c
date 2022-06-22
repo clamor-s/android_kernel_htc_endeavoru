@@ -35,7 +35,6 @@
 #include "gpio-names.h"
 #include "board.h"
 
-
 #define ENDEAVOR_WLAN_PWR	TEGRA_GPIO_PV2
 #define ENDEAVOR_WLAN_RST	TEGRA_GPIO_PV3
 #define ENDEAVOR_WLAN_WOW	TEGRA_GPIO_PO4
@@ -47,21 +46,12 @@ static void (*wifi_status_cb)(int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 static int endeavor_wifi_status_register(void (*callback)(int , void *), void *);
 
-static int endeavor_wifi_reset(int on);
 /* HTC_WIFI_START */
-//static int endeavor_wifi_power(int on);
-//static int endeavor_wifi_set_carddetect(int val);
 int endeavor_wifi_power(int on);
 int endeavor_wifi_set_carddetect(int val);
-int endeavor_wifi_status(struct device *dev);
+unsigned int endeavor_wifi_status(struct device *dev);
 static int endeavor_wifi_cd;		/* WIFI virtual 'card detect' status */
 /* HTC_WIFI_END */
-
-static struct wifi_platform_data endeavor_wifi_control = {
-	.set_power      = endeavor_wifi_power,
-	.set_reset      = endeavor_wifi_reset,
-	.set_carddetect = endeavor_wifi_set_carddetect,
-};
 
 /* HTC_WIFI_START */
 static struct wl12xx_platform_data endeavor_wlan_data __initdata = {
@@ -71,25 +61,6 @@ static struct wl12xx_platform_data endeavor_wlan_data __initdata = {
 //	.platform_quirks = WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
 };
 /* HTC_WIFI_END */
-
-static struct resource wifi_resource[] = {
-	[0] = {
-		.name	= "bcm4329_wlan_irq",
-		.start	= TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PU6),
-		.end	= TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PU6),
-		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
-	},
-};
-
-static struct platform_device endeavor_wifi_device = {
-	.name           = "bcm4329_wlan",
-	.id             = 1,
-	.num_resources	= 1,
-	.resource	= wifi_resource,
-	.dev            = {
-		.platform_data = &endeavor_wifi_control,
-	},
-};
 
 static int emmc_suspend_gpiocfg(void)
 {
@@ -259,7 +230,7 @@ static int endeavor_wifi_status_register(
 	return 0;
 }
 
-int endeavor_wifi_status(struct device *dev)
+unsigned int endeavor_wifi_status(struct device *dev)
 {
 	return endeavor_wifi_cd;
 }
@@ -280,10 +251,12 @@ int enterprise_wifi_sdclk (int enable){
     printk("set sdio clk:%d\n",enable);
     if(enable) {
         tegra_gpio_disable(SDIO_CLK);
-    }else{
+    } else {
         tegra_gpio_enable(SDIO_CLK);
         gpio_direction_output(SDIO_CLK, 0);
     }
+    
+    return 0;
 }
 
 
@@ -311,12 +284,6 @@ int endeavor_wifi_power(int on)
 }
 EXPORT_SYMBOL(endeavor_wifi_power);
 /* HTC_WIFI_END */
-
-static int endeavor_wifi_reset(int on)
-{
-	pr_debug("%s: do nothing\n", __func__);
-	return 0;
-}
 
 #ifdef CONFIG_TEGRA_PREPOWER_WIFI
 static int __init endeavoru_wifi_prepower(void)
@@ -361,12 +328,11 @@ static int __init endeavor_wifi_init(void)
 		pr_err("WLAN_WOW gpio direction configuration failed:%d\n", rc);
 
 	/* HTC_WIFI_START */
-	// platform_device_register(&endeavor_wifi_device);
 	if (wl12xx_set_platform_data(&endeavor_wlan_data))
 		pr_err("Error setting wl12xx_data\n");
 	/* HTC_WIFI_END */
 
-    printk("[AUS] endeavor_wlan_data.irq=%d\n",endeavor_wlan_data.irq);
+	printk("[AUS] endeavor_wlan_data.irq=%d\n",endeavor_wlan_data.irq);
 	return 0;
 }
 
@@ -423,7 +389,7 @@ EXPORT_SYMBOL(blue_pincfg_uartc_suspend);
 void blue_pincfg_uartc_gpio_request(void) {
 
         /* BT_EN GPIO-U.00 O(L) */
-        long err = 0;
+        int err = 0;
 
 	/* UART3_CTS_N GPIO-A.01 */
         err = gpio_request(TEGRA_GPIO_PA1, "bt");
@@ -452,8 +418,6 @@ void blue_pincfg_uartc_gpio_request(void) {
         tegra_gpio_enable(TEGRA_GPIO_PO5);
         gpio_direction_input(TEGRA_GPIO_PO5);
 	tegra_pinmux_set_pullupdown(TEGRA_PINGROUP_ULPI_DATA4, TEGRA_PUPD_NORMAL);
-
-
 }
 
 EXPORT_SYMBOL(blue_pincfg_uartc_gpio_request);
