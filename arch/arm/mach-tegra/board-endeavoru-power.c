@@ -87,7 +87,6 @@ static struct regulator_consumer_supply tps80031_vio_supply_common[] = {
 	REGULATOR_SUPPLY("vddio_sdmmc3", NULL),
 };
 
-
 static struct regulator_consumer_supply tps80031_smps1_supply_common[] = {
 	REGULATOR_SUPPLY("vdd_cpu", NULL),
 };
@@ -140,9 +139,6 @@ static struct regulator_consumer_supply tps80031_ldo6_supply_common[] = {
 	REGULATOR_SUPPLY("vdd_ddr_rx", NULL),
 };
 
-//static struct regulator_consumer_supply tps80031_ldo7_supply_common[] = {
-//	REGULATOR_SUPPLY("v_sr_2v85", NULL),
-//};
 static struct regulator_consumer_supply tps80031_ldo7_supply_common[] = {
 	REGULATOR_SUPPLY("v_pllmeux_1v2", NULL),
 	REGULATOR_SUPPLY("vdd_plla_p_c", NULL),
@@ -311,36 +307,8 @@ static struct tps80031_platform_data tps_platform = {
 	.use_power_off	= true,
 };
 
-/************************ TPS6238x0 DC-DC converter ****************/
-//static struct regulator_consumer_supply tps6238x0_dcdc_supply[] = {
-//	REGULATOR_SUPPLY("vdd_cpu", NULL),
-//};
-
-//static struct tps6238x0_regulator_platform_data tps6238x0_pdata = {
-//	.reg_init_data = {
-//		.constraints = {
-//			.min_uV = 500000,
-//			.max_uV = 1770000,
-//			.valid_modes_mask = (REGULATOR_MODE_NORMAL |
-//					     REGULATOR_MODE_STANDBY),
-//			.valid_ops_mask = (REGULATOR_CHANGE_MODE |
-//					   REGULATOR_CHANGE_STATUS |
-//					   REGULATOR_CHANGE_VOLTAGE),
-//			.always_on = 0,
-//			.boot_on =  1,
-//			.apply_uV = 0,
-//		},
-//		.num_consumer_supplies = ARRAY_SIZE(tps6238x0_dcdc_supply),
-//		.consumer_supplies = tps6238x0_dcdc_supply,
-//		},
-//	.en_discharge = 0,
-//	.en_internal_pulldn = 1,
-//	.vsel_gpio = -1,
-//	.vsel_def_state = 1,
-//};
-
 /************************ GPIO based fixed regulator ****************/
-/* REGEN2 from PMU*/
+/* REGEN2 from PMU */
 static struct regulator_consumer_supply fixed_reg_led_3v3_en_supply[] = {
 	REGULATOR_SUPPLY("v_led_3v3", NULL),
 };
@@ -482,22 +450,23 @@ static struct regulator_consumer_supply fixed_reg_sdmmc_2v85_en_supply[] = {
 
 #define GREG_INIT(_id, _name, _input_supply, _gpio_nr, _active_low, \
 			_init_state, _pg, _enable, _disable)
-FIXED_REG(0, led_3v3_en,     NULL,      ENT_TPS80031_GPIO_REGEN2,
-                                                         true, 3300, 1, 0);
-FIXED_REG(1, aud_a1v8_en,    NULL,      TEGRA_GPIO_PD2,  true, 1800, 0, 0);
-FIXED_REG(2, vib_3v_en,      NULL,      TEGRA_GPIO_PE7,  true, 3000, 0, 0);
-FIXED_REG(3, mhl_3v3_en,     NULL,      TEGRA_GPIO_PY2,  true, 3300, 0, 0);
-FIXED_REG(4, aud_3v3_en,   NULL,      TEGRA_GPIO_PB2,  true, 3300, 0, 0);
-FIXED_REG(5, cam_vcm_2v85_en,   NULL,      TEGRA_GPIO_PM7,  true, 2850, 0, 0);
-FIXED_REG(6, lcm_3v3_en,     NULL,      TEGRA_GPIO_PE2,  true, 3300, 1, 0);
-FIXED_REG(7, lcmio_1v8_en,   "tps80031_VIO", TEGRA_GPIO_PE5,  true, 1800, 1, 0);
-FIXED_REG(8, srio_1v8_en,    "tps80031_VIO", TEGRA_GPIO_PY3,  true, 1800, 1, 0);
-FIXED_REG(9, cam2_d1v2_en,   "tps80031_VIO", TEGRA_GPIO_PF6,  true, 1200, 0, 0);
-FIXED_REG(10, cam_d1v2_en,    "tps80031_VIO", TEGRA_GPIO_PF5,  true, 1200, 0, 0);
-FIXED_REG(11, camio_1v8_en,   NULL,      TEGRA_GPIO_PBB4, true, 1800, 0, 0);
-FIXED_REG(12, cam_a2v85_en,   NULL,      TEGRA_GPIO_PE3, true, 2850, 0, 0);
-FIXED_REG(13, mhl_1v2_en,     NULL,      TEGRA_GPIO_PE4,  true, 1200, 0, 0);
-FIXED_REG(14, sdmmc_2v85_en,     NULL,      TEGRA_GPIO_PM3,  true, 2850, 1, 0);
+FIXED_REG(0, led_3v3_en,	NULL,		ENT_TPS80031_GPIO_REGEN2, true, 3300, 1, 0);
+FIXED_REG(1, aud_a1v8_en,	NULL,		TEGRA_GPIO_PD2,  true, 1800, 0, 0);
+FIXED_REG(2, vib_3v_en,		NULL,		TEGRA_GPIO_PE7,  true, 3000, 0, 0);
+FIXED_REG(4, aud_3v3_en,	NULL,		TEGRA_GPIO_PB2,  true, 3300, 0, 0);
+FIXED_REG(6, lcm_3v3_en,	NULL,		TEGRA_GPIO_PE2,  true, 3300, 1, 0);
+FIXED_REG(7, lcmio_1v8_en,	"tps80031_VIO",	TEGRA_GPIO_PE5,  true, 1800, 1, 0);
+FIXED_REG(8, srio_1v8_en,	"tps80031_VIO",	TEGRA_GPIO_PY3,  true, 1800, 1, 0);
+FIXED_REG(14, sdmmc_2v85_en,	NULL,		TEGRA_GPIO_PM3,  true, 2850, 1, 0);
+
+/* Regulators which in downstream handled as GPIOs */
+FIXED_REG(3, mhl_3v3_en,	NULL,		TEGRA_GPIO_PY2,  true, 3300, 0, 0);
+FIXED_REG(5, cam_vcm_2v85_en,	NULL,		TEGRA_GPIO_PM7,  true, 2850, 0, 0);
+FIXED_REG(9, cam2_d1v2_en,	"tps80031_VIO",	TEGRA_GPIO_PF6,  true, 1200, 0, 0);
+FIXED_REG(10, cam_d1v2_en,	"tps80031_VIO",	TEGRA_GPIO_PF5,  true, 1200, 0, 0);
+FIXED_REG(11, camio_1v8_en,	NULL,		TEGRA_GPIO_PBB4, true, 1800, 0, 0);
+FIXED_REG(12, cam_a2v85_en,	NULL,		TEGRA_GPIO_PE3,  true, 2850, 0, 0);
+FIXED_REG(13, mhl_1v2_en,	NULL,		TEGRA_GPIO_PE4,  true, 1200, 0, 0);
 
 #define ADD_FIXED_REG(_name)	(&fixed_reg_##_name##_dev)
 
@@ -584,10 +553,6 @@ static struct i2c_board_info __initdata endeavoru_regulators[] = {
 		.irq		= INT_EXTERNAL_PMU,
 		.platform_data	= &tps_platform,
 	},
-//	{
-//		I2C_BOARD_INFO("tps6238x0", 0x42),
-//		.platform_data	= &tps6238x0_pdata,
-//	},
 };
 
 #ifdef CONFIG_PM
@@ -605,7 +570,6 @@ static void endeavoru_resume_work(void)
 		pr_err("%s: fail to output high PMU_GPIO_PMU_MSECURE\n", __func__);
 }
 #endif
-
 
 static int __init endeavoru_gpio_rtc_init(void)
 {
@@ -708,8 +672,7 @@ int __init endeavoru_edp_init(void)
 	unsigned int regulator_mA;
 
 	regulator_mA = get_maximum_cpu_current_supported();
-	//if (!regulator_mA) {
-	//}
+
 	regulator_mA = 5000; /* regular AP30 */
 	pr_info("%s: CPU regulator %d mA\n", __func__, regulator_mA);
 
