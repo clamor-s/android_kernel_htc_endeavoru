@@ -30,78 +30,8 @@
 #include "board-endeavoru.h"
 #include "devices.h"
 
-#define ENDEAVORU_ROW_COUNT	3
-#define ENDEAVORU_COL_COUNT	3
-
-static const u32 kbd_keymap[] = {
-	KEY(0, 0, KEY_ENTER),
-
-	KEY(1, 0, KEY_HOME),
-	KEY(1, 1, KEY_BACK),
-	KEY(1, 2, KEY_DOWN),
-
-	KEY(2, 0, KEY_MENU),
-	KEY(2, 1, KEY_SEARCH),
-	KEY(2, 2, KEY_UP),
-};
-
-static const struct matrix_keymap_data keymap_data = {
-	.keymap		= kbd_keymap,
-	.keymap_size	= ARRAY_SIZE(kbd_keymap),
-};
-
-static struct tegra_kbc_wake_key endeavoru_wake_cfg[] = {
-	[0] = {
-		.row = 0,
-		.col = 0,
-	},
-	[1] = {
-		.row = 1,
-		.col = 0,
-	},
-	[2] = {
-		.row = 1,
-		.col = 1,
-	},
-	[3] = {
-		.row = 2,
-		.col = 0,
-	},
-};
-
-static struct tegra_kbc_platform_data endeavoru_kbc_platform_data = {
-	.debounce_cnt = 20 * 32, /* 20 ms debaunce time */
-	.repeat_cnt = 1,
-	.scan_count = 30,
-	.wakeup = true,
-	.keymap_data = &keymap_data,
-	.wake_cnt = 4,
-	.wake_cfg = &endeavoru_wake_cfg[0],
-#ifdef CONFIG_ANDROID
-	.disable_ev_rep = true,
-#endif
-};
-
 int __init endeavoru_kbc_init(void)
 {
-	struct tegra_kbc_platform_data *data = &endeavoru_kbc_platform_data;
-	int i;
-	tegra_kbc_device.dev.platform_data = &endeavoru_kbc_platform_data;
-	pr_info("Registering tegra-kbc\n");
-
-	BUG_ON((KBC_MAX_ROW + KBC_MAX_COL) > KBC_MAX_GPIO);
-	for (i = 0; i < ENDEAVORU_ROW_COUNT; i++) {
-		data->pin_cfg[i].num = i;
-		data->pin_cfg[i].is_row = true;
-		data->pin_cfg[i].en = true;
-	}
-	for (i = 0; i < ENDEAVORU_COL_COUNT; i++) {
-		data->pin_cfg[i + KBC_PIN_GPIO_16].num = i;
-		data->pin_cfg[i + KBC_PIN_GPIO_16].en = true;
-	}
-
-	platform_device_register(&tegra_kbc_device);
-	pr_info("Registering successful tegra-kbc\n");
 	return 0;
 }
 
