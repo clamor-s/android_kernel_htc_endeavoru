@@ -1908,80 +1908,6 @@ static void endeavoru_baseband_init(void)
 //        uhsic_phy_config.post_phy_off = endeavoru_usb_hsic_phy_off;
 }
 
-
-static struct keyreset_platform_data enr_reset_keys_pdata = {
-	.keys_down = {
-		KEY_POWER,
-		KEY_VOLUMEDOWN,
-		KEY_VOLUMEUP,
-		0
-	},
-	.swResetCheck = NULL,
-};
-
-static struct platform_device enr_reset_keys_device = {
-	.name = KEYRESET_NAME,
-	.dev.platform_data = &enr_reset_keys_pdata,
-};
-
-// for ENRC2 project bring up
-#define GPIO_KEY(_id, _gpio, _iswake)		\
-	{					\
-		.code = _id,			\
-		.gpio = TEGRA_GPIO_##_gpio,	\
-		.active_low = 1,		\
-		.desc = #_id,			\
-		.type = EV_KEY,			\
-		.wakeup = _iswake,		\
-		.debounce_interval = 20,	\
-	}
-
-#define BOOT_DEBUG_LOG_ENTER(fn) \
-	printk(KERN_NOTICE "[BOOT_LOG] Entering %s\n", fn);
-#define BOOT_DEBUG_LOG_LEAVE(fn) \
-	printk(KERN_NOTICE "[BOOT_LOG] Leaving %s\n", fn);
-
-static int enrkey_wakeup() {
-	if ( is_resume_from_deep_suspend() ) {
-		unsigned long status =
-			readl(IO_ADDRESS(TEGRA_PMC_BASE) + PMC_WAKE_STATUS);
-		return status & TEGRA_WAKE_GPIO_PU6 ? KEY_POWER : KEY_RESERVED;
-	} else
-		return KEY_RESERVED;
-}
-
-static struct gpio_keys_button ENDEAVORU_PROJECT_keys[] = {
-	[0] = GPIO_KEY(KEY_POWER, PU6, 1),
-	[1] = GPIO_KEY(KEY_VOLUMEUP, PS0, 0),
-	[2] = GPIO_KEY(KEY_VOLUMEDOWN, PW3, 0),
- };
-
-static struct gpio_keys_platform_data ENDEAVORU_PROJECT_keys_platform_data = {
-	.buttons	= ENDEAVORU_PROJECT_keys,
-	.nbuttons	= ARRAY_SIZE(ENDEAVORU_PROJECT_keys),
-	.wakeup_key     = enrkey_wakeup,
- };
-
-static struct platform_device ENDEAVORU_PROJECT_keys_device = {
-	.name   = "gpio-keys",
-	.id     = 0,
-	.dev    = {
-		.platform_data  = &ENDEAVORU_PROJECT_keys_platform_data,
-	},
-};
-
-int __init ENDEAVORU_PROJECT_keys_init(void)
-{
-	int i;
-	pr_info("[KEY]Enter ENDEAVORU_PROJECT_keys_init\n");
-	for (i = 0; i < ARRAY_SIZE(ENDEAVORU_PROJECT_keys); i++)
-		tegra_gpio_enable(ENDEAVORU_PROJECT_keys[i].gpio);
-
-	platform_device_register(&ENDEAVORU_PROJECT_keys_device);
-
-	return 0;
-}
-
 //MHL
 #ifdef	CONFIG_TEGRA_HDMI_MHL
 
@@ -2056,6 +1982,15 @@ static struct i2c_board_info i2c_mhl_sii_info[] =
 		.irq = TEGRA_GPIO_TO_IRQ(EDGE_GPIO_MHL_INT)
 	}
 };
+
+static void __init endeavoru_mhl_init(void)
+{
+	/* Register HDMI bridge */
+	i2c_register_board_info(4, i2c_mhl_sii_info,
+			ARRAY_SIZE(i2c_mhl_sii_info));
+};
+#else
+static void __init endeavoru_mhl_init(void) { };
 #endif
 
 static void __init endeavoru_init(void)
@@ -2069,11 +2004,17 @@ static void __init endeavoru_init(void)
 				ARRAY_SIZE(throttle_list));
 	tegra_clk_init_from_table(endeavoru_clk_init_table);
 	endeavoru_pinmux_init();
+
 	endeavoru_i2c_init();
 	endeavoru_spi_init();
-	endeavoru_uart_init();
 	endeavoru_usb_init();
+#ifdef CONFIG_TEGRA_EDP_LIMITS
+	endeavoru_edp_init();
+#endif
+	endeavoru_uart_init();
+
 	bt_export_bd_address();
+
 	platform_add_devices(endeavoru_devices, ARRAY_SIZE(endeavoru_devices));
 	platform_device_register(&htc_headset_mgr_xe);
 
@@ -2091,25 +2032,23 @@ static void __init endeavoru_init(void)
 #if defined(CONFIG_MEMORY_FOOTPRINT_DEBUGGING)
 	htc_memory_footprint_init();
 #endif
+
 	tegra_ram_console_debug_init();
-	endeavoru_regulator_init();
-	ENDEAVORU_PROJECT_keys_init();
 	endeavoru_sdhci_init();
-#ifdef CONFIG_TEGRA_EDP_LIMITS
-	endeavoru_edp_init();
-#endif
+	endeavoru_regulator_init();
+
 #ifdef CONFIG_TEGRA_HDMI_MHL
-	i2c_register_board_info(4, i2c_mhl_sii_info,
-			ARRAY_SIZE(i2c_mhl_sii_info));
+	endeavoru_mhl_init();
 #endif
 	endeavoru_touch_init();
+	endeavoru_kbc_init();
 	endeavor_bt_wl128x();
-	if (platform_device_register(&enr_reset_keys_device))
-		printk(KERN_WARNING "[KEY]%s: register reset key fail\n", __func__);
+
         properties_kobj = kobject_create_and_add("board_properties", NULL);
 	if (properties_kobj) {
 		sysfs_create_group(properties_kobj, &Aproj_properties_attr_group_XC);
 	}
+
 	endeavoru_audio_init();
 	//endeavoru_gps_init();
 	endeavoru_baseband_init();
@@ -2118,6 +2057,7 @@ static void __init endeavoru_init(void)
 	endeavoru_sensors_init();
 	endeavoru_cam_init();
 	endeavoru_suspend_init();
+
 	tegra_release_bootloader_fb();
 	tegra_vibrator_init();
 	leds_lp5521_init();
@@ -2132,7 +2072,7 @@ static void __init endeavoru_init(void)
 		printk(KERN_ERR"Create /proc/dying_processes FAILED!\n");
 
 	if (board_mfg_mode() != BOARD_MFG_MODE_OFFMODE_CHARGING)
-#if ! defined(CONFIG_HTC_PERFORMANCE_MONITOR_ALWAYS_ON)
+#if !defined(CONFIG_HTC_PERFORMANCE_MONITOR_ALWAYS_ON)
 		if (get_kernel_flag() & KERNEL_FLAG_PM_MONITOR)
 #endif
 		{
