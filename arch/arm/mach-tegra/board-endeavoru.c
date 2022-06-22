@@ -71,7 +71,6 @@
 #include <mach/thermal.h>
 #include <mach/mhl.h>
 #include <mach/tegra-bb-power.h>
-#include <mach/htc_bdaddress.h>
 #include <mach/htc_util.h>
 #include "board.h"
 #include "clock.h"
@@ -163,7 +162,6 @@ static struct tegra_thermal_data thermal_data = {
 	.temp_throttle_skin = 43000,
 #endif
 };
-
 
 //leds-lp5521
 static struct led_i2c_config lp5521_led_config[] = {
@@ -458,7 +456,7 @@ static struct platform_device endeavoru_audio_device = {
 	},
 };
 
-#if (defined(CONFIG_SND_AMP_TFA9887))
+#ifdef CONFIG_SND_AMP_TFA9887
 static struct tfa9887_platform_data endeavoru_speaker_amp_data = {
 	.gpio_tfa9887_spk_en = -1,	// not used
 };
@@ -780,7 +778,7 @@ static void endeavoru_i2c_init(void)
 	platform_device_register(&tegra_i2c_device2);
 	platform_device_register(&tegra_i2c_device1);
 
-#if (defined(CONFIG_SND_AMP_TFA9887))
+#ifdef CONFIG_SND_AMP_TFA9887
 	i2c_register_board_info(0, i2c_speaker_amp_devices,
 		ARRAY_SIZE(i2c_speaker_amp_devices));
 #endif
@@ -802,10 +800,6 @@ static struct uart_clk_parent uart_parent_clk[] = {
 #endif
 };
 static struct tegra_uart_platform_data endeavoru_uart_pdata;
-
-#ifdef CONFIG_SERIAL_TEGRA_BRCM
-static struct tegra_uart_platform_data endeavoru_brcm_uart_pdata;
-#endif
 
 #ifdef CONFIG_BT_CTS_WAKEUP
 static struct tegra_uart_platform_data endeavor_bt_uart_pdata;
@@ -887,15 +881,6 @@ static void __init endeavoru_uart_init(void)
 	endeavor_bt_uart_pdata.bt_en = BT_GPIO_EN;
 	endeavor_bt_uart_pdata.bt_cts_irq = BT_GPIO_CTS_IRQ;
 	tegra_uartc_device.dev.platform_data = &endeavor_bt_uart_pdata;
-#endif
-
-#ifdef CONFIG_SERIAL_TEGRA_BRCM
-	endeavoru_brcm_uart_pdata = endeavoru_uart_pdata;
-	endeavoru_brcm_uart_pdata.bt_wakeup_pin_supported = 1;
-	endeavoru_brcm_uart_pdata.bt_wakeup_pin = ENDEAVORU_GPIO_BT_WAKE;
-	endeavoru_brcm_uart_pdata.host_wakeup_pin = ENDEAVORU_GPIO_BT_HOST_WAKE;
-	tegra_uartc_device.dev.platform_data = &endeavoru_brcm_uart_pdata;
-	tegra_uartc_device.name = "tegra_uart_brcm"; /* for brcm */
 #endif
 
 /* GPS uses UARTE
@@ -1004,49 +989,6 @@ static struct platform_device *endeavoru_devices[] __initdata = {
 #endif
 };
 
-#define MXT_CONFIG_CRC 0x62F903
-/*
- * Config converted from memory-mapped cfg-file with
- * following version information:
- *
- *
- *
- *      FAMILY_ID=128
- *      VARIANT=1
- *      VERSION=32
- *      BUILD=170
- *      VENDOR_ID=255
- *      PRODUCT_ID=TBD
- *      CHECKSUM=0xC189B6
- *
- *
- */
-
-static const u8 config[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xFF, 0xFF, 0x32, 0x0A, 0x00, 0x05, 0x01, 0x00,
-        0x00, 0x1E, 0x0A, 0x8B, 0x00, 0x00, 0x13, 0x0B,
-        0x00, 0x10, 0x32, 0x03, 0x03, 0x00, 0x03, 0x01,
-        0x00, 0x0A, 0x0A, 0x0A, 0x0A, 0xBF, 0x03, 0x1B,
-        0x02, 0x00, 0x00, 0x37, 0x37, 0x00, 0x00, 0x00,
-        0x00, 0x28, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0xA9, 0x7F, 0x9A, 0x0E, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x03, 0x23, 0x00, 0x00, 0x00, 0x0A,
-        0x0F, 0x14, 0x19, 0x03, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x03, 0x08, 0x10,
-        0x00
-};
-
 //virtual key for XC board and later (3 virtual keys)
 static ssize_t Aproj_virtual_keys_show_XC(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
@@ -1077,7 +1019,6 @@ static struct attribute_group Aproj_properties_attr_group_XC = {
 /* Touchscreen GPIO addresses   */
 #define TOUCH_GPIO_IRQ TEGRA_GPIO_PV1
 #define TOUCH_GPIO_RST TEGRA_GPIO_PF3
-#define TOUCH_GPIO_PWD TEGRA_GPIO_PY2
 
 static struct regulator *srio_1v8_en;
 
@@ -1805,42 +1746,12 @@ static struct platform_device simhotswap_device = {
     .id = -1,
 };
 
-#ifdef CONFIG_TEGRA_BB_M7400
-static union tegra_bb_gpio_id m7400_gpio_id = {
-	.m7400 = {
-		.pwr_status = GPIO_BB_RESET,
-		.pwr_on = GPIO_BB_PWRON,
-		.uart_awr = GPIO_BB_APACK,
-		.uart_cwr = GPIO_BB_CPACK,
-		.usb_awr = GPIO_BB_APACK2,
-		.usb_cwr = GPIO_BB_CPACK2,
-		.service = GPIO_BB_RSVD2,
-		.resout2 = GPIO_BB_RSVD1,
-	},
-};
-
-static struct tegra_bb_pdata m7400_pdata = {
-	.id = &m7400_gpio_id,
-	.device = &tegra_ehci2_device,
-	.ehci_register = tegra_usb_hsic_host_register,
-	.ehci_unregister = tegra_usb_hsic_host_unregister,
-	.bb_id = TEGRA_BB_M7400,
-};
-
-static struct platform_device tegra_baseband_m7400_device = {
-	.name = "tegra_baseband_power",
-	.id = -1,
-	.dev = {
-		.platform_data = &m7400_pdata,
-	},
-};
-#endif
-
 static void endeavoru_modem_init(void)
 {
         int ret;
 
         pr_info("%s: enable baseband gpio(s)\n", __func__);
+
         /* enable baseband gpio(s) */
         tegra_gpio_enable(BB_VDD_EN);
         tegra_gpio_enable(AP2BB_RST_PWRDWNn);
@@ -1868,47 +1779,39 @@ static void endeavoru_modem_init(void)
         if (ret < 0)
                 pr_err("[FLT] %s: gpio_request failed for gpio %s\n",
                         __func__, "sin_init");
+
         ret = gpio_direction_input(TEGRA_GPIO_PI5);
-
-
         if (ret < 0) {
                 pr_err("[FLT] %s: gpio_direction_output failed %d\n", __func__, ret);
                 gpio_free(TEGRA_GPIO_PI5);
                 return;
         }
+
         tegra_gpio_enable(TEGRA_GPIO_PI5);
         gpio_export(TEGRA_GPIO_PI5, true);
         //jerry.pj--
 
         /*enable core dumo dectect++*/
         printk(KERN_INFO"%s: gpio config for core dump when radio fatal error.", __func__);
+
         /* TEGRA_GPIO_PN2*/
         ret = gpio_request(TEGRA_GPIO_PN2, "core_dump");
         if (ret < 0)
                 pr_err("[FLT] %s: gpio_request failed for gpio %s\n",
                         __func__, "core_dump");
+
         ret = gpio_direction_input(TEGRA_GPIO_PN2);
         if (ret < 0) {
                 pr_err("[FLT] %s: gpio_direction_input failed %d\n", __func__, ret);
                 gpio_free(TEGRA_GPIO_PN2);
                 return;
         }
+
         tegra_gpio_enable(TEGRA_GPIO_PN2);
         gpio_export(TEGRA_GPIO_PN2, true);
         /*enable core dumo dectect--*/
 }
 
-static void endeavoru_baseband_init(void)
-{
-        endeavoru_modem_init();
-
-//        uhsic_phy_config.postsuspend = endeavoru_usb_hsic_postsupend;
-//        uhsic_phy_config.preresume = endeavoru_usb_hsic_preresume;
-//        uhsic_phy_config.usb_phy_ready = endeavoru_usb_hsic_phy_ready;
-//        uhsic_phy_config.post_phy_off = endeavoru_usb_hsic_phy_off;
-}
-
-//MHL
 #ifdef	CONFIG_TEGRA_HDMI_MHL
 
 #define EDGE_GPIO_MHL_INT       TEGRA_GPIO_PC7
@@ -2013,8 +1916,6 @@ static void __init endeavoru_init(void)
 #endif
 	endeavoru_uart_init();
 
-	bt_export_bd_address();
-
 	platform_add_devices(endeavoru_devices, ARRAY_SIZE(endeavoru_devices));
 	platform_device_register(&htc_headset_mgr_xe);
 
@@ -2051,7 +1952,7 @@ static void __init endeavoru_init(void)
 
 	endeavoru_audio_init();
 	//endeavoru_gps_init();
-	endeavoru_baseband_init();
+	endeavoru_modem_init();
 	endeavor_panel_init();
 	endeavoru_emc_init();
 	endeavoru_sensors_init();
@@ -2065,7 +1966,6 @@ static void __init endeavoru_init(void)
 #if defined(CONFIG_CABLE_DETECT_ACCESSORY)
 	endeavoru_cable_detect_init();
 #endif
-	//endeavoru_nfc_init();
 
 	proc = create_proc_read_entry("dying_processes", 0, NULL, dying_processors_read_proc, NULL);
 	if (!proc)
