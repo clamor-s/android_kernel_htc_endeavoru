@@ -65,29 +65,15 @@
 
 /* !!!FIXME!!!! POPULATE THIS TABLE */
 static __initdata struct tegra_drive_pingroup_config endeavoru_drive_pinmux[] = {
-	/* DEFAULT_DRIVE(<pin_group>), */
-	/* SET_DRIVE(ATA, DISABLE, DISABLE, DIV_1, 31, 31, FAST, FAST) */
 	SET_DRIVE(DAP2, 	DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
 	SET_DRIVE(SPI, 	        DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
 
 	/* All I2C pins are driven to maximum drive strength */
-	/* GEN1 I2C */
-	SET_DRIVE(DBG,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-
-	/* GEN2 I2C */
-	SET_DRIVE(AT5,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-
-	/* CAM I2C */
-	SET_DRIVE(GME,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-
-	/* DDC I2C */
-	SET_DRIVE(DDC,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-
-	/* PWR_I2C */
-	SET_DRIVE(AO1,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),
-
-	/* UART3 */
-	/*SET_DRIVE(UART3,	DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),*/
+	SET_DRIVE(DBG,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),	/* GEN1 I2C */
+	SET_DRIVE(AT5,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),	/* GEN2 I2C */
+	SET_DRIVE(GME,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),	/* CAM I2C */
+	SET_DRIVE(DDC,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),	/* DDC I2C */
+	SET_DRIVE(AO1,		DISABLE, ENABLE, DIV_1, 31, 31, FASTEST, FASTEST),	/* PWR_I2C */
 };
 
 #define DEFAULT_PINMUX(_pingroup, _mux, _pupd, _tri, _io)	\
@@ -403,95 +389,33 @@ static __initdata struct tegra_pingroup_config endeavoru_pinmux_common[] = {
     DEFAULT_PINMUX(HDMI_CEC,        CEC,            NORMAL,    NORMAL,     INPUT),              //NC
 };
 
-static __initdata struct tegra_pingroup_config endeavoru_pinmux_EVM[] = {
-    DEFAULT_PINMUX(LCD_D8,       RSVD,    PULL_DOWN,    NORMAL,    INPUT), // camera VCM power
-	/* add SFIO config for specific board here */
-};
-
-static __initdata struct tegra_pingroup_config endeavoru_pinmux_EVT_XA[] = {
-	/* add SFIO config for specific board here */
-	DEFAULT_PINMUX(GMI_AD8,         PWM0,            NORMAL,    NORMAL ,   OUTPUT), //HAPTIC_PWM_XA
-};
-
-static __initdata struct tegra_pingroup_config endeavoru_pinmux_EVT_XB[] = {
-	/* add SFIO config for specific board here */
-	DEFAULT_PINMUX(UART2_TXD,       SPI4,            NORMAL,    NORMAL,     INPUT),  //MAMCAM_SPI_CLK
-	DEFAULT_PINMUX(UART2_RXD,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MAMCAM_SPI_DO
-	DEFAULT_PINMUX(UART2_RTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_DI
-	DEFAULT_PINMUX(UART2_CTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_CS0
-	DEFAULT_PINMUX(KB_ROW0,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR0(input only)
-	DEFAULT_PINMUX(KB_ROW3,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V8_EN
-	DEFAULT_PINMUX(KB_ROW4,       RSVD,            NORMAL,    NORMAL,     INPUT),     //RAW_RSTN
-	DEFAULT_PINMUX(KB_ROW5,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V2_EN
-	DEFAULT_PINMUX(CLK3_REQ,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR1(input only)
-	DEFAULT_PINMUX(GMI_AD8,         PWM0,            NORMAL,    NORMAL ,   OUTPUT), //HAPTIC_PWM_XB
-};
-
-static __initdata struct tegra_pingroup_config endeavoru_pinmux_EVT_XC[] = {
-	/* add SFIO config for specific board here */
-	DEFAULT_PINMUX(GMI_AD8,         PWM0,            NORMAL,    NORMAL ,   OUTPUT), //HAPTIC_PWM_XC
-
-	/* clone from endeavoru_pinmux_EVT_XB */
-	DEFAULT_PINMUX(UART2_TXD,       SPI4,            NORMAL,    NORMAL,     INPUT),  //MAMCAM_SPI_CLK
-	DEFAULT_PINMUX(UART2_RXD,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MAMCAM_SPI_DO
-	DEFAULT_PINMUX(UART2_RTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_DI
-	DEFAULT_PINMUX(UART2_CTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_CS0
-	DEFAULT_PINMUX(KB_ROW0,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR0(input only)
-	DEFAULT_PINMUX(KB_ROW3,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V8_EN
-	DEFAULT_PINMUX(KB_ROW4,       RSVD,            NORMAL,    NORMAL,     INPUT),     //RAW_RSTN
-	DEFAULT_PINMUX(KB_ROW5,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V2_EN
-	DEFAULT_PINMUX(CLK3_REQ,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR1(input only)
-   DEFAULT_PINMUX(ULPI_DATA4,     RSVD,           NORMAL,   NORMAL,     INPUT),   //BT UART CTS wake up source
-};
-
-static __initdata struct tegra_pingroup_config endeavoru_pinmux_EVT_XD[] = {
-	/* add SFIO config for specific board here */
-	DEFAULT_PINMUX(GMI_AD8,         PWM0,            NORMAL,    NORMAL ,   OUTPUT), //HAPTIC_PWM_XC
-
-	/* clone from endeavoru_pinmux_EVT_XB */
-	DEFAULT_PINMUX(UART2_TXD,       SPI4,            NORMAL,    NORMAL,     INPUT),  //MAMCAM_SPI_CLK
-	DEFAULT_PINMUX(UART2_RXD,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MAMCAM_SPI_DO
-	DEFAULT_PINMUX(UART2_RTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_DI
-	DEFAULT_PINMUX(UART2_CTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_CS0
-	DEFAULT_PINMUX(KB_ROW0,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR0(input only)
-	DEFAULT_PINMUX(KB_ROW3,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V8_EN
-	DEFAULT_PINMUX(KB_ROW4,       RSVD,            NORMAL,    NORMAL,     INPUT),     //RAW_RSTN
-	DEFAULT_PINMUX(KB_ROW5,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V2_EN
-	DEFAULT_PINMUX(CLK3_REQ,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR1(input only)
-   DEFAULT_PINMUX(ULPI_DATA4,     RSVD,           NORMAL,   NORMAL,     INPUT),   //BT UART CTS wake up source
-
-	/* PLSensor sdmmc_2v85_en */
-	DEFAULT_PINMUX(LCD_D19,  RSVD, NORMAL, NORMAL, OUTPUT),
-};
-
 static __initdata struct tegra_pingroup_config endeavoru_pinmux_EVT_XE[] = {
-	DEFAULT_PINMUX(GMI_AD8,         PWM0,            NORMAL,    NORMAL ,   OUTPUT), //HAPTIC_PWM_XC
-	DEFAULT_PINMUX(UART2_TXD,       SPI4,            NORMAL,    NORMAL,     INPUT),  //MAMCAM_SPI_CLK
-	DEFAULT_PINMUX(UART2_RXD,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MAMCAM_SPI_DO
-	DEFAULT_PINMUX(UART2_RTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_DI
-	DEFAULT_PINMUX(UART2_CTS_N,       SPI4,            NORMAL,    NORMAL,     INPUT),     //MCAM_SPI_CS0
-	DEFAULT_PINMUX(KB_ROW0,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR0(input only)
-	DEFAULT_PINMUX(KB_ROW3,       RSVD,            NORMAL, NORMAL,     INPUT),     //RAW_1V8_EN
-	DEFAULT_PINMUX(KB_ROW4,       RSVD,            NORMAL,    NORMAL,     INPUT),     //RAW_RSTN
-	DEFAULT_PINMUX(KB_ROW5,       RSVD,            NORMAL, NORMAL,     OUTPUT),     //NC
-	DEFAULT_PINMUX(CLK3_REQ,       RSVD,            NORMAL,    TRISTATE,     INPUT),     //RAW_INTR1(input only)
-	DEFAULT_PINMUX(ULPI_DATA4,     RSVD,           NORMAL,   NORMAL,     INPUT),   //BT UART CTS wake up source
+	DEFAULT_PINMUX(GMI_AD8,		PWM0,	NORMAL,		NORMAL,		OUTPUT),	//HAPTIC_PWM_XC
+	DEFAULT_PINMUX(UART2_TXD,	SPI4,	NORMAL,		NORMAL,		INPUT),		//MAMCAM_SPI_CLK
+	DEFAULT_PINMUX(UART2_RXD,	SPI4,	NORMAL,		NORMAL,		INPUT),		//MAMCAM_SPI_DO
+	DEFAULT_PINMUX(UART2_RTS_N,	SPI4,	NORMAL,		NORMAL,		INPUT),		//MCAM_SPI_DI
+	DEFAULT_PINMUX(UART2_CTS_N,	SPI4,	NORMAL,		NORMAL,		INPUT),		//MCAM_SPI_CS0
+	DEFAULT_PINMUX(KB_ROW0,		RSVD,	NORMAL,		TRISTATE,	INPUT),		//RAW_INTR0(input only)
+	DEFAULT_PINMUX(KB_ROW3,		RSVD,	NORMAL,		NORMAL,		INPUT),		//RAW_1V8_EN
+	DEFAULT_PINMUX(KB_ROW4,		RSVD,	NORMAL,		NORMAL,		INPUT),		//RAW_RSTN
+	DEFAULT_PINMUX(KB_ROW5,		RSVD,	NORMAL,		NORMAL,		OUTPUT),	//NC
+	DEFAULT_PINMUX(CLK3_REQ,	RSVD,	NORMAL,		TRISTATE,	INPUT),		//RAW_INTR1(input only)
+	DEFAULT_PINMUX(ULPI_DATA4,	RSVD,	NORMAL,		NORMAL,		INPUT),		//BT UART CTS wake up source
 
 	/* PLSensor sdmmc_2v85_en */
-	DEFAULT_PINMUX(LCD_D19,  RSVD, NORMAL, NORMAL, OUTPUT),
+	DEFAULT_PINMUX(LCD_D19,		RSVD,	NORMAL,		NORMAL,		OUTPUT),
 };
 
 int __init endeavoru_pinmux_init(void)
 {
-	int board_id;
-	tegra_pinmux_config_table(endeavoru_pinmux_common, ARRAY_SIZE(endeavoru_pinmux_common));
+	tegra_pinmux_config_table(endeavoru_pinmux_common,
+		ARRAY_SIZE(endeavoru_pinmux_common));
+
 	tegra_drive_pinmux_config_table(endeavoru_drive_pinmux,
-					ARRAY_SIZE(endeavoru_drive_pinmux));
+		ARRAY_SIZE(endeavoru_drive_pinmux));
 
-		board_id = htc_get_pcbid_info();
-
-		tegra_pinmux_config_table(endeavoru_pinmux_EVT_XE,
-			ARRAY_SIZE(endeavoru_pinmux_EVT_XE));
+	tegra_pinmux_config_table(endeavoru_pinmux_EVT_XE,
+		ARRAY_SIZE(endeavoru_pinmux_EVT_XE));
 
 	return 0;
 }
