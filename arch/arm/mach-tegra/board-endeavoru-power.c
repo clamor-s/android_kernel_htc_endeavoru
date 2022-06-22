@@ -166,10 +166,6 @@ static struct regulator_consumer_supply tps80031_vbus_supply_common[] = {
 	REGULATOR_SUPPLY("usb_vbus", NULL),
 };
 
-static struct regulator_consumer_supply tps80031_battery_charge_supply[] = {
-	REGULATOR_SUPPLY("usb_bat_chg", NULL),
-};
-
 #define TPS_PDATA_INIT(_id, _sname, _minmv, _maxmv, _supply_reg, _always_on,		\
 	_boot_on, _apply_uv, _init_uV, _init_enable, _init_apply,			\
 	_flags, _ectrl, _delay)								\
@@ -304,13 +300,6 @@ static struct tps80031_clk32k_init_data clk32k_idata[] = {
 		.clk32k_nr = TPS80031_CLOCK32K_AUDIO,
 		.enable = true,
 		.ext_ctrl_flag = 0,
-	},
-};
-
-static struct tps80031_pupd_init_data pupd_idata[] = {
-	{
-		.input_pin = TPS80031_PREQ1,
-		.setting = TPS80031_PUPD_PULLUP,
 	},
 };
 
