@@ -801,7 +801,9 @@ int __init endeavor_panel_init(void)
 	/*switch initial command by panel_id*/
 	switch (PANEL_MASK(g_panel_id)) {
 		case PANEL_ID_SHARP_HX_XA:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_HX_XA\n");
 		case PANEL_ID_SHARP_HX_C3:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_HX_C3\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_hx_c3_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_hx_c3_cmd;
 			endeavor_dsi.n_cabc_cmd = ARRAY_SIZE(hx_moving_mode_cmd);
@@ -809,6 +811,7 @@ int __init endeavor_panel_init(void)
 			endeavor_dsi.dsi_cabc_still_mode = hx_still_mode_cmd;
 		break;
 		case PANEL_ID_SHARP_HX_C4:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_HX_C4\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_hx_c4_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_hx_c4_cmd;
 			endeavor_dsi.n_cabc_cmd = ARRAY_SIZE(hx_moving_mode_cmd);
@@ -816,7 +819,9 @@ int __init endeavor_panel_init(void)
 			endeavor_dsi.dsi_cabc_still_mode = hx_still_mode_cmd;
 		break;
 		case PANEL_ID_SHARP_HX_C5:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_HX_C5\n");
 		case PANEL_ID_SHARP_HX:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_HX\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_hx_c5_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_hx_c5_cmd;
 			endeavor_dsi.n_cabc_cmd = ARRAY_SIZE(hx_moving_mode_cmd);
@@ -824,6 +829,7 @@ int __init endeavor_panel_init(void)
 			endeavor_dsi.dsi_cabc_still_mode = hx_still_mode_cmd;
 		break;
 		case PANEL_ID_SONY_NT_C1:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SONY_NT_C1\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sony_nt_c1_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sony_nt_c1_cmd;
 
@@ -840,7 +846,9 @@ int __init endeavor_panel_init(void)
 			endeavor_disp1_backlight_data.n_dimming_off_cmd = ARRAY_SIZE(dimming_off_cmd);
 		break;
 		case PANEL_ID_SONY_NT_C2:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SONY_NT_C2\n");
 		case PANEL_ID_SONY:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SONY\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sony_nt_c2_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sony_nt_c2_cmd;
 
@@ -857,6 +865,7 @@ int __init endeavor_panel_init(void)
 			endeavor_disp1_backlight_data.n_dimming_off_cmd = ARRAY_SIZE(dimming_off_cmd);
 		break;
 		case PANEL_ID_SHARP_NT_C1:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_NT_C1\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c1_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_nt_c1_cmd;
 			endeavor_dsi.refresh_rate = 60;
@@ -875,6 +884,7 @@ int __init endeavor_panel_init(void)
 			endeavor_disp1_backlight_data.n_dimming_off_cmd = ARRAY_SIZE(dimming_off_cmd);
 		break;
 		case PANEL_ID_SHARP_NT_C2:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_NT_C2\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_nt_c2_cmd;
 
@@ -891,6 +901,7 @@ int __init endeavor_panel_init(void)
 			endeavor_disp1_backlight_data.n_dimming_off_cmd = ARRAY_SIZE(dimming_off_cmd);
 		break;
 		case PANEL_ID_SHARP_NT_C2_9A:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP_NT_C2_9A\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_9a_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_nt_c2_9a_cmd;
 
@@ -907,10 +918,12 @@ int __init endeavor_panel_init(void)
 			endeavor_disp1_backlight_data.n_dimming_off_cmd = ARRAY_SIZE(dimming_off_cmd);
 		break;
 		case PANEL_ID_SHARP:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_SHARP\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_unknow_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_unknow_cmd;
 		break;
 		case PANEL_ID_AUO_NT_C2:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_AUO_NT_C2\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_auo_nt_c2_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_auo_nt_c2_cmd;
 
@@ -920,7 +933,9 @@ int __init endeavor_panel_init(void)
 			endeavor_dsi.osc_on_cmd = osc_on_cmd;
 		break;
 		case PANEL_ID_AUO_NT_X7:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_AUO_NT_X7\n");
 		case PANEL_ID_AUO:
+			pr_info("[PANEL INIT]: panel is PANEL_ID_AUO\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_auo_nt_x7_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_auo_nt_x7_cmd;
 
@@ -930,6 +945,7 @@ int __init endeavor_panel_init(void)
 			endeavor_dsi.osc_on_cmd = osc_on_cmd;
 		break;
 		default:
+			pr_info("[PANEL INIT]: panel is DEFAUL\n");
 			endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_9a_cmd);
 			endeavor_dsi.dsi_init_cmd = dsi_init_sharp_nt_c2_9a_cmd;
 
