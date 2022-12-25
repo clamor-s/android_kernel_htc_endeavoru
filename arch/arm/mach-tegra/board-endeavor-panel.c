@@ -75,9 +75,6 @@ static struct gpio panel_init_gpios[] = {
     {LCM_RST,	GPIOF_OUT_INIT_HIGH,	"lcm reset"},
 };
 
-/* global varible for work around */
-static bool g_display_on = true;
-
 /*
  * BL_MASK is BIT(18) | BIT(17) | BIT (16)
  * PANEL_MASK(id)  (id & 0xFFFFFF00)
@@ -145,8 +142,6 @@ static struct platform_tegra_pwm_backlight_data endeavor_disp1_backlight_data = 
 	.check_fb		= endeavor_disp1_check_fb,
 	.backlight_status	= BACKLIGHT_ENABLE,
 	.cam_launch_bkl_value	= 181,
-	.dimming_off_cmd	= NULL,
-	.n_dimming_off_cmd	= 0,
 };
 
 static struct platform_device endeavor_disp1_backlight_device = {
@@ -176,16 +171,72 @@ static void bkl_update(unsigned long data) {
 }
 
 #ifdef CONFIG_TEGRA_DC
+static void bridge_reset(void)
+{
+	int err = 0;
+
+	DISP_INFO_IN();
+
+	if (is_power_on)
+		return 0;
+
+	/* delay for DSI hardware stable*/
+	hr_msleep(10);
+
+	/* change LCM_TE & LCM_PWM to SFIO */
+	tegra_gpio_disable(LCM_TE);
+
+	REGULATOR_GET(endeavor_dsi_reg, "avdd_dsi_csi");
+	regulator_enable(endeavor_dsi_reg);
+
+	/* Start panel init */	
+	REGULATOR_GET(v_lcm_3v3, "v_lcm_3v3");
+	REGULATOR_GET(v_lcmio_1v8, "v_lcmio_1v8");
+
+	/* LCD_RST pull low */
+	gpio_set_value(LCM_RST, 0);
+	hr_msleep(5);
+
+	/*Turn on LCMIO_1V8_EN*/
+	regulator_enable(v_lcmio_1v8);
+	hr_msleep(1);
+
+	/*Turn on LCMIO_3V3_EN*/
+	regulator_enable(v_lcm_3v3);
+	hr_msleep(20);
+
+	is_power_on = 1;
+
+failed:
+	DISP_INFO_OUT();
+}
+
+static void ic_reset(void)
+{
+	DISP_INFO_IN();
+
+	gpio_set_value(LCM_RST, 1);
+	hr_msleep(2);
+
+	gpio_set_value(LCM_RST, 0);
+	hr_msleep(1);
+
+	gpio_set_value(LCM_RST, 1);
+	hr_msleep(25);
+
+	DISP_INFO_OUT();
+}
+
 static int endeavor_dsi_panel_enable(void)
 {
-	/*TODO the power-on sequence move to bridge_reset*/
+	bridge_reset();
+	ic_reset();
+
 	return 0;
 }
 
 static int endeavor_dsi_panel_disable(void)
 {
-	int err = 0;
-
 	if (!is_power_on)
 		return 0;
 
@@ -208,92 +259,9 @@ static int endeavor_dsi_panel_disable(void)
 	tegra_gpio_enable(LCM_TE);
 
 	is_power_on = 0;
-	DISP_INFO_LN("is_power_on:%d\n", is_power_on);
+
+	DISP_INFO_OUT();
 failed:
-
-	DISP_INFO_OUT();
-
-	return err;
-}
-
-static int bridge_reset(void)
-{
-	int err = 0;
-
-	DISP_INFO_IN();
-
-	if (is_power_on)
-		return 0;
-
-	/*TODO delay for DSI hardware stable*/
-	hr_msleep(10);
-
-	/* change LCM_TE & LCM_PWM to SFIO */
-	tegra_gpio_disable(LCM_TE);
-
-	/*TODO: workaround to prevent panel off during dc_probe, remove it later*/
-	if(g_display_on) {
-		REGULATOR_GET(endeavor_dsi_reg, "avdd_dsi_csi");
-		regulator_enable(endeavor_dsi_reg);
-
-		REGULATOR_GET(v_lcm_3v3, "v_lcm_3v3");
-		REGULATOR_GET(v_lcmio_1v8, "v_lcmio_1v8");
-
-		regulator_enable(v_lcmio_1v8);
-		regulator_enable(v_lcm_3v3);
-
-		DISP_INFO_LN("Workaround for first panel init sequence\n");
-		goto success;
-		return 0;
-	}
-
-	REGULATOR_GET(endeavor_dsi_reg, "avdd_dsi_csi");
-	regulator_enable(endeavor_dsi_reg);
-
-	REGULATOR_GET(v_lcm_3v3, "v_lcm_3v3");
-	REGULATOR_GET(v_lcmio_1v8, "v_lcmio_1v8");
-
-	/*LCD_RST pull low*/
-	gpio_set_value(LCM_RST, 0);
-	hr_msleep(5);
-
-	/*Turn on LCMIO_1V8_EN*/
-	regulator_enable(v_lcmio_1v8);
-	hr_msleep(1);
-
-	/*Turn on LCMIO_3V3_EN*/
-	regulator_enable(v_lcm_3v3);
-	hr_msleep(20);
-
-	gpio_set_value(LCM_RST, 1);
-	hr_msleep(1);
-failed:
-success:
-	is_power_on = 1;
-	DISP_INFO_LN("is_power_on:%d\n", is_power_on);
-	DISP_INFO_OUT();
-
-	return err;
-}
-
-static int ic_reset(void)
-{
-	DISP_INFO_IN();
-
-	if(g_display_on) {
-		g_display_on = false;
-		return 0;
-	}
-
-	hr_msleep(2);
-	gpio_set_value(LCM_RST, 0);
-
-	hr_msleep(1);
-	gpio_set_value(LCM_RST, 1);
-
-	hr_msleep(25);
-
-	DISP_INFO_OUT();
 	return 0;
 }
 
@@ -311,17 +279,33 @@ struct tegra_dsi_out endeavor_dsi = {
 	.panel_reset = DSI_PANEL_RESET,
 	.power_saving_suspend = true,
 
-	.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_cmd),
-	.dsi_init_cmd = dsi_init_sharp_nt_c2_cmd,
+	/* PANEL_ID_SHARP_NT_C2_9A */
+	.dsi_init_cmd = dsi_init_sharp_nt_c2_9a_cmd,
+	.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_9a_cmd),
 
-	.n_early_suspend_cmd = ARRAY_SIZE(dsi_early_suspend_cmd),
-	.dsi_early_suspend_cmd = dsi_early_suspend_cmd,
+	.osc_off_cmd = osc_off_cmd,
+	.n_osc_off_cmd = ARRAY_SIZE(osc_off_cmd),
 
-	.n_late_resume_cmd = ARRAY_SIZE(dsi_late_resume_cmd),
-	.dsi_late_resume_cmd = dsi_late_resume_cmd,
+	.osc_on_cmd = osc_on_cmd,
+	.n_osc_on_cmd = ARRAY_SIZE(osc_on_cmd),
 
-	.n_suspend_cmd = ARRAY_SIZE(dsi_suspend_cmd),
+	.dsi_cabc_moving_mode = nt_moving_mode_cmd,
+	.n_cabc_cmd = ARRAY_SIZE(nt_moving_mode_cmd),
+
+	.dsi_cabc_still_mode = nt_still_mode_cmd,
+
+	.dsi_cabc_dimming_on_cmd = dimming_on_cmd,
+	.n_cabc_dimming_on_cmd = ARRAY_SIZE(dimming_on_cmd),
+	/* PANEL_ID_SHARP_NT_C2_9A - END*/
+
+//	.dsi_early_suspend_cmd = dsi_early_suspend_cmd,
+//	.n_early_suspend_cmd = ARRAY_SIZE(dsi_early_suspend_cmd),
+
+//	.dsi_late_resume_cmd = dsi_late_resume_cmd,
+//	.n_late_resume_cmd = ARRAY_SIZE(dsi_late_resume_cmd),
+
 	.dsi_suspend_cmd = dsi_suspend_cmd,
+	.n_suspend_cmd = ARRAY_SIZE(dsi_suspend_cmd),
 
 	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_TX_ONLY,
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
@@ -331,7 +315,7 @@ struct tegra_dsi_out endeavor_dsi = {
 	/* TODO: Get the vender recommended freq */
 	.lp_read_cmd_mode_freq_khz = 200000,
 
-	/* base on kernel2.6 setting */
+	/* base on kernel 2.6 setting */
 	.phy_timing.t_hsdexit_ns = 108,
 	.phy_timing.t_hstrail_ns = 60,
 	.phy_timing.t_datzero_ns = 172,
@@ -381,9 +365,9 @@ static struct tegra_dc_out endeavor_disp1_out = {
 	.width		= 53,
 	.height		= 95,
 
-	/*TODO let power-on sequence wait until dsi hardware init*/
-	.bridge_reset	= bridge_reset,
-	.ic_reset	= ic_reset,
+	/*TODO let power-on sequence wait until dsi hardware init */
+//	.bridge_reset	= bridge_reset,
+//	.ic_reset	= ic_reset,
 
 	.power_wakeup	= POWER_WAKEUP_ENR,
 	.performance_tuning = 1,
@@ -526,23 +510,6 @@ int __init endeavor_panel_init(void)
 	/* Copy the bootloader fb to the fb. */
 	tegra_move_framebuffer(tegra_fb_start, tegra_bootloader_fb_start,
 		min(tegra_fb_size, tegra_bootloader_fb_size));
-
-	/* PANEL_ID_SHARP_NT_C2_9A */
-	endeavor_dsi.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_9a_cmd);
-	endeavor_dsi.dsi_init_cmd = dsi_init_sharp_nt_c2_9a_cmd;
-
-	endeavor_dsi.n_osc_off_cmd = ARRAY_SIZE(osc_off_cmd);
-	endeavor_dsi.osc_off_cmd = osc_off_cmd;
-	endeavor_dsi.n_osc_on_cmd = ARRAY_SIZE(osc_on_cmd);
-	endeavor_dsi.osc_on_cmd = osc_on_cmd;
-	endeavor_dsi.n_cabc_cmd = ARRAY_SIZE(nt_moving_mode_cmd);
-	endeavor_dsi.dsi_cabc_moving_mode = nt_moving_mode_cmd;
-	endeavor_dsi.dsi_cabc_still_mode = nt_still_mode_cmd;
-	endeavor_dsi.n_cabc_dimming_on_cmd = ARRAY_SIZE(dimming_on_cmd);
-	endeavor_dsi.dsi_cabc_dimming_on_cmd = dimming_on_cmd;
-
-	endeavor_disp1_backlight_data.dimming_off_cmd = dimming_off_cmd;
-	endeavor_disp1_backlight_data.n_dimming_off_cmd = ARRAY_SIZE(dimming_off_cmd);
 
 #if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_TEGRA_DC)
 	if (!err)
