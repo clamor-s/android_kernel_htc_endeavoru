@@ -47,10 +47,7 @@
 #include <linux/disp_debug.h>
 #include <linux/debugfs.h>
 
-#define POWER_WAKEUP_ENR 7
-
-#define DC_CTRL_MODE	TEGRA_DC_OUT_ONE_SHOT_MODE
-/* Select panel to be used. */
+#define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
 #define DSI_PANEL_RESET 1
 
 #ifdef CONFIG_TEGRA_DC
@@ -74,11 +71,6 @@ static struct gpio panel_init_gpios[] = {
     {LCM_PWM,	GPIOF_OUT_INIT_LOW,	"pm0"},
     {LCM_RST,	GPIOF_OUT_INIT_HIGH,	"lcm reset"},
 };
-
-/*
- * BL_MASK is BIT(18) | BIT(17) | BIT (16)
- * PANEL_MASK(id)  (id & 0xFFFFFF00)
- */
 
 /* Endeavoru has Sharp, Sony or Auo panels */
 
@@ -105,8 +97,6 @@ static unsigned char shrink_pwm(int val)
 	shrink_br = def_pwm +
 	(val-ORIG_PWM_DEF)*(max_pwm-def_pwm)/(ORIG_PWM_MAX-ORIG_PWM_DEF);
 
-	//pr_info("brightness orig = %d, transformed=%d\n", val, shrink_br);
-
 	return shrink_br;
 }
 
@@ -117,7 +107,6 @@ static int endeavor_backlight_notify(struct device *unused, int brightness)
 
 	return brightness;
 }
-
 
 static int endeavor_disp1_check_fb(struct device *dev, struct fb_info *info);
 /*
@@ -171,10 +160,8 @@ static void bkl_update(unsigned long data) {
 }
 
 #ifdef CONFIG_TEGRA_DC
-static void bridge_reset(void)
+static int endeavor_dsi_panel_enable(void)
 {
-	int err = 0;
-
 	DISP_INFO_IN();
 
 	if (is_power_on)
@@ -205,16 +192,7 @@ static void bridge_reset(void)
 	regulator_enable(v_lcm_3v3);
 	hr_msleep(20);
 
-	is_power_on = 1;
-
-failed:
-	DISP_INFO_OUT();
-}
-
-static void ic_reset(void)
-{
-	DISP_INFO_IN();
-
+	/* panel reset */
 	gpio_set_value(LCM_RST, 1);
 	hr_msleep(2);
 
@@ -224,14 +202,10 @@ static void ic_reset(void)
 	gpio_set_value(LCM_RST, 1);
 	hr_msleep(25);
 
+	is_power_on = 1;
+
 	DISP_INFO_OUT();
-}
-
-static int endeavor_dsi_panel_enable(void)
-{
-	bridge_reset();
-	ic_reset();
-
+failed:
 	return 0;
 }
 
@@ -268,8 +242,19 @@ failed:
 struct tegra_dsi_out endeavor_dsi = {
 	.n_data_lanes = 2,
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
+
+#if (DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
+	/*
+	 * The one-shot frame time must be shorter than the time between TE.
+	 * Increasing refresh_rate will result in a decrease in the frame time
+	 * for one-shot. rated_refresh_rate is only an approximation of the
+	 * TE rate, and is only used to report refresh rate to upper layers.
+	 */
 	.refresh_rate = 66,
 	.rated_refresh_rate = 60,
+#else
+	.refresh_rate = 60,
+#endif
 
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
@@ -298,22 +283,13 @@ struct tegra_dsi_out endeavor_dsi = {
 	.n_cabc_dimming_on_cmd = ARRAY_SIZE(dimming_on_cmd),
 	/* PANEL_ID_SHARP_NT_C2_9A - END*/
 
-//	.dsi_early_suspend_cmd = dsi_early_suspend_cmd,
-//	.n_early_suspend_cmd = ARRAY_SIZE(dsi_early_suspend_cmd),
-
-//	.dsi_late_resume_cmd = dsi_late_resume_cmd,
-//	.n_late_resume_cmd = ARRAY_SIZE(dsi_late_resume_cmd),
-
 	.dsi_suspend_cmd = dsi_suspend_cmd,
 	.n_suspend_cmd = ARRAY_SIZE(dsi_suspend_cmd),
 
-	.video_clock_mode = TEGRA_DSI_VIDEO_CLOCK_TX_ONLY,
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
+	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
 
 	.lp_cmd_mode_freq_khz = 20000,
-
-	/* TODO: Get the vender recommended freq */
-	.lp_read_cmd_mode_freq_khz = 200000,
 
 	/* base on kernel 2.6 setting */
 	.phy_timing.t_hsdexit_ns = 108,
@@ -350,8 +326,10 @@ static struct tegra_dc_out endeavor_disp1_out = {
 	.align		= TEGRA_DC_ALIGN_MSB,
 	.order		= TEGRA_DC_ORDER_RED_BLUE,
 
-	.flags		= DC_CTRL_MODE,
+	.parent_clk	= "pll_d_out0",
+	.depth		= 24,
 
+	.flags		= DC_CTRL_MODE,
 	.type		= TEGRA_DC_OUT_DSI,
 
 	.modes		= endeavor_dsi_modes,
@@ -365,12 +343,6 @@ static struct tegra_dc_out endeavor_disp1_out = {
 	.width		= 53,
 	.height		= 95,
 
-	/*TODO let power-on sequence wait until dsi hardware init */
-//	.bridge_reset	= bridge_reset,
-//	.ic_reset	= ic_reset,
-
-	.power_wakeup	= POWER_WAKEUP_ENR,
-	.performance_tuning = 1,
 	.video_min_bw	= 51000000,
 };
 
