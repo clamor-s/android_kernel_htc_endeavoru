@@ -171,7 +171,7 @@ static int endeavor_dsi_panel_enable(void)
 	hr_msleep(10);
 
 	/* change LCM_TE & LCM_PWM to SFIO */
-	tegra_gpio_disable(LCM_TE);
+//	tegra_gpio_disable(LCM_TE);
 
 	REGULATOR_GET(endeavor_dsi_reg, "avdd_dsi_csi");
 	regulator_enable(endeavor_dsi_reg);
@@ -230,7 +230,7 @@ static int endeavor_dsi_panel_disable(void)
 	regulator_disable(endeavor_dsi_reg);
 
 	/* change LCM_TE to GPIO */
-	tegra_gpio_enable(LCM_TE);
+//	tegra_gpio_enable(LCM_TE);
 
 	is_power_on = 0;
 
