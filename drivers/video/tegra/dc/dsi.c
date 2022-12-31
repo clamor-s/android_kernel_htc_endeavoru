@@ -304,9 +304,7 @@ const u32 init_reg[] = {
 	DSI_PKT_LEN_6_7,
 };
 
-static int tegra_dsi_host_suspend(struct tegra_dc *dc);
 static int tegra_dsi_host_resume(struct tegra_dc *dc);
-static void tegra_dc_dsi_idle_work(struct work_struct *work);
 
 inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
@@ -595,7 +593,6 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	spin_lock_init(&dsi->host_ref_lock);
 	mutex_init(&dsi->host_resume_lock);
 	init_completion(&dc->out->user_vblank_comp);
-	INIT_DELAYED_WORK(&dsi->idle_work, tegra_dc_dsi_idle_work);
 	dsi->idle_delay = msecs_to_jiffies(DSI_HOST_IDLE_PERIOD);
 }
 
@@ -2075,15 +2072,6 @@ static void tegra_dc_dsi_release_host(struct tegra_dc *dc)
 	}
 }
 
-static void tegra_dc_dsi_idle_work(struct work_struct *work)
-{
-	struct tegra_dc_dsi_data *dsi = container_of(
-		to_delayed_work(work), struct tegra_dc_dsi_data, idle_work);
-
-	if (dsi->dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE)
-		tegra_dsi_host_suspend(dsi->dc);
-}
-
 int tegra_dsi_write_data(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
 			u8 *pdata, u8 data_id, u16 data_len)
@@ -3324,31 +3312,6 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 
 	return 0;
 fail:
-	return err;
-}
-
-static int tegra_dsi_host_suspend(struct tegra_dc *dc)
-{
-	int err = 0;
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
-
-	if (dsi->host_suspended)
-		return 0;
-
-	BUG_ON(!tegra_is_clk_enabled(dc->clk));
-	tegra_dc_io_start(dc);
-	dsi->host_suspended = true;
-
-	tegra_dsi_stop_dc_stream(dc, dsi);
-
-	err = tegra_dsi_deep_sleep(dc, dsi, dsi->info.suspend_aggr);
-	if (err < 0)
-		dev_err(&dc->ndev->dev,
-			"DSI failed to enter deep sleep\n");
-
-	tegra_dc_clk_disable(dc);
-
-	tegra_dc_io_end(dc);
 	return err;
 }
 
