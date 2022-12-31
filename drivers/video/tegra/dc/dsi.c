@@ -310,129 +310,15 @@ static void tegra_dc_dsi_idle_work(struct work_struct *work);
 
 inline unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 {
-	unsigned long ret;
-	if (nvhost_get_parent(dsi->dc->ndev))
-		BUG_ON(!nvhost_module_powered_ext(nvhost_get_parent(dsi->dc->ndev)));
-	ret = readl(dsi->base + reg * 4);
-	trace_printk("readl %p=%#08lx\n", dsi->base + reg * 4, ret);
-	return ret;
+	return readl(dsi->base + reg * 4);
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
 
 inline void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 {
-	if (nvhost_get_parent(dsi->dc->ndev))
-		BUG_ON(!nvhost_module_powered_ext(nvhost_get_parent(dsi->dc->ndev)));
-	trace_printk("writel %p=%#08x\n", dsi->base + reg * 4, val);
 	writel(val, dsi->base + reg * 4);
 }
 EXPORT_SYMBOL(tegra_dsi_writel);
-
-#ifdef CONFIG_DEBUG_FS
-static int dbg_dsi_show(struct seq_file *s, void *unused)
-{
-	struct tegra_dc_dsi_data *dsi = s->private;
-
-#define DUMP_REG(a) do {						\
-		seq_printf(s, "%-32s\t%03x\t%08lx\n",			\
-		       #a, a, tegra_dsi_readl(dsi, a));		\
-	} while (0)
-
-	tegra_dc_io_start(dsi->dc);
-	clk_enable(dsi->dsi_clk);
-
-	DUMP_REG(DSI_INCR_SYNCPT_CNTRL);
-	DUMP_REG(DSI_INCR_SYNCPT_ERROR);
-	DUMP_REG(DSI_CTXSW);
-	DUMP_REG(DSI_POWER_CONTROL);
-	DUMP_REG(DSI_INT_ENABLE);
-	DUMP_REG(DSI_HOST_DSI_CONTROL);
-	DUMP_REG(DSI_CONTROL);
-	DUMP_REG(DSI_SOL_DELAY);
-	DUMP_REG(DSI_MAX_THRESHOLD);
-	DUMP_REG(DSI_TRIGGER);
-	DUMP_REG(DSI_TX_CRC);
-	DUMP_REG(DSI_STATUS);
-	DUMP_REG(DSI_INIT_SEQ_CONTROL);
-	DUMP_REG(DSI_INIT_SEQ_DATA_0);
-	DUMP_REG(DSI_INIT_SEQ_DATA_1);
-	DUMP_REG(DSI_INIT_SEQ_DATA_2);
-	DUMP_REG(DSI_INIT_SEQ_DATA_3);
-	DUMP_REG(DSI_INIT_SEQ_DATA_4);
-	DUMP_REG(DSI_INIT_SEQ_DATA_5);
-	DUMP_REG(DSI_INIT_SEQ_DATA_6);
-	DUMP_REG(DSI_INIT_SEQ_DATA_7);
-	DUMP_REG(DSI_PKT_SEQ_0_LO);
-	DUMP_REG(DSI_PKT_SEQ_0_HI);
-	DUMP_REG(DSI_PKT_SEQ_1_LO);
-	DUMP_REG(DSI_PKT_SEQ_1_HI);
-	DUMP_REG(DSI_PKT_SEQ_2_LO);
-	DUMP_REG(DSI_PKT_SEQ_2_HI);
-	DUMP_REG(DSI_PKT_SEQ_3_LO);
-	DUMP_REG(DSI_PKT_SEQ_3_HI);
-	DUMP_REG(DSI_PKT_SEQ_4_LO);
-	DUMP_REG(DSI_PKT_SEQ_4_HI);
-	DUMP_REG(DSI_PKT_SEQ_5_LO);
-	DUMP_REG(DSI_PKT_SEQ_5_HI);
-	DUMP_REG(DSI_DCS_CMDS);
-	DUMP_REG(DSI_PKT_LEN_0_1);
-	DUMP_REG(DSI_PKT_LEN_2_3);
-	DUMP_REG(DSI_PKT_LEN_4_5);
-	DUMP_REG(DSI_PKT_LEN_6_7);
-	DUMP_REG(DSI_PHY_TIMING_0);
-	DUMP_REG(DSI_PHY_TIMING_1);
-	DUMP_REG(DSI_PHY_TIMING_2);
-	DUMP_REG(DSI_BTA_TIMING);
-	DUMP_REG(DSI_TIMEOUT_0);
-	DUMP_REG(DSI_TIMEOUT_1);
-	DUMP_REG(DSI_TO_TALLY);
-	DUMP_REG(DSI_PAD_CONTROL);
-	DUMP_REG(DSI_PAD_CONTROL_CD);
-	DUMP_REG(DSI_PAD_CD_STATUS);
-	DUMP_REG(DSI_VID_MODE_CONTROL);
-#undef DUMP_REG
-
-	clk_disable(dsi->dsi_clk);
-	tegra_dc_io_end(dsi->dc);
-
-	return 0;
-}
-
-static int dbg_dsi_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, dbg_dsi_show, inode->i_private);
-}
-
-static const struct file_operations dbg_fops = {
-	.open		= dbg_dsi_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static struct dentry *dsidir;
-
-static void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
-{
-	struct dentry *retval;
-
-	dsidir = debugfs_create_dir("tegra_dsi", NULL);
-	if (!dsidir)
-		return;
-	retval = debugfs_create_file("regs", S_IRUGO, dsidir, dsi,
-		&dbg_fops);
-	if (!retval)
-		goto free_out;
-	return;
-free_out:
-	debugfs_remove_recursive(dsidir);
-	dsidir = NULL;
-	return;
-}
-#else
-static inline void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
-{ }
-#endif
 
 static inline void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 {
@@ -1707,26 +1593,14 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
-	if (dsi->info.impedance_para)
-		val =	DSI_PAD_CONTROL_PAD_LPUPADJ(dsi->info.impedance_para) |
-			DSI_PAD_CONTROL_PAD_LPDNADJ(dsi->info.impedance_para);
-	else
-		val =   DSI_PAD_CONTROL_PAD_LPUPADJ(0x1) |
-			DSI_PAD_CONTROL_PAD_LPDNADJ(0x1);
-
-	val |= 	DSI_PAD_CONTROL_PAD_PREEMP_EN(0x1) |
+	val =   DSI_PAD_CONTROL_PAD_LPUPADJ(0x1) |
+		DSI_PAD_CONTROL_PAD_LPDNADJ(0x1) |
+		DSI_PAD_CONTROL_PAD_PREEMP_EN(0x1) |
 		DSI_PAD_CONTROL_PAD_SLEWDNADJ(0x6) |
-		DSI_PAD_CONTROL_PAD_SLEWUPADJ(0x6);
-
-	if (!dsi->ulpm) {
-		val |=	DSI_PAD_CONTROL_PAD_PDIO(0) |
-			DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
-			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE);
-	} else {
-		val |=	DSI_PAD_CONTROL_PAD_PDIO(0x3) |
-			DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
-			DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_ENABLE);
-	}
+		DSI_PAD_CONTROL_PAD_SLEWUPADJ(0x6) |
+		DSI_PAD_CONTROL_PAD_PDIO(0) |
+		DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
+		DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE);
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 
 	val = MIPI_CAL_TERMOSA(0x4);
@@ -1745,15 +1619,6 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 	tegra_vi_csi_writel(val, CSI_CIL_PAD_CONFIG);
 }
 
-static void tegra_dsi_panelB_enable(void)
-{
-	unsigned int val;
-
-	val = readl(IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0));
-	val |= DSIB_MODE_ENABLE;
-	writel(val, (IO_ADDRESS(APB_MISC_GP_MIPI_PAD_CTRL_0)));
-}
-
 static int tegra_dsi_init_hw(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
@@ -1766,9 +1631,6 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	udelay(300);
 
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
-	if (dsi->info.dsi_instance) {
-		tegra_dsi_panelB_enable();
-	}
 
 	/* TODO: only need to change the timing for bta */
 	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
@@ -3090,15 +2952,6 @@ fail:
 	mutex_unlock(&dsi->lock);
 }
 
-static void _tegra_dc_dsi_init(struct tegra_dc *dc)
-{
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
-
-	tegra_dc_dsi_debug_create(dsi);
-	tegra_dsi_init_sw(dc, dsi);
-	/* TODO: Configure the CSI pad configuration */
-}
-
 static int tegra_dc_dsi_cp_p_cmd(struct tegra_dsi_cmd *src,
 					struct tegra_dsi_cmd *dst, u16 n_cmd)
 {
@@ -3299,10 +3152,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_release_regs;
 	}
 
-	if (dsi_pdata->dsi_instance)
-		dsi_clk = clk_get(&dc->ndev->dev, "dsib");
-	else
-		dsi_clk = clk_get(&dc->ndev->dev, "dsia");
+	dsi_clk = clk_get(&dc->ndev->dev, "dsia");
 
 	if (IS_ERR_OR_NULL(dsi_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: can't get clock\n");
@@ -3330,7 +3180,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_dsi_data;
 
 	tegra_dc_set_outdata(dc, dsi);
-	_tegra_dc_dsi_init(dc);
+	tegra_dsi_init_sw(dc, dsi);
 
 	return 0;
 
@@ -3392,14 +3242,10 @@ static void tegra_dsi_config_phy_clk(struct tegra_dc_dsi_data *dsi,
 	/* Disable dsi fast and slow clock */
 	parent_clk = clk_get_parent(dsi->dsi_clk);
 	base_clk = clk_get_parent(parent_clk);
-	if (dsi->info.dsi_instance)
-		tegra_clk_cfg_ex(base_clk,
-				TEGRA_CLK_PLLD_CSI_OUT_ENB,
-				settings);
-	else
-		tegra_clk_cfg_ex(base_clk,
-				TEGRA_CLK_PLLD_DSI_OUT_ENB,
-				settings);
+
+	tegra_clk_cfg_ex(base_clk,
+			TEGRA_CLK_PLLD_DSI_OUT_ENB,
+			settings);
 }
 
 static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
@@ -3615,47 +3461,6 @@ fail:
 	tegra_dc_io_end(dc);
 }
 
-#ifdef CONFIG_PM
-static void tegra_dc_dsi_suspend(struct tegra_dc *dc)
-{
-	struct tegra_dc_dsi_data *dsi;
-
-	dsi = tegra_dc_get_outdata(dc);
-
-	if (!dsi->enabled)
-		return;
-
-	tegra_dc_io_start(dc);
-	mutex_lock(&dsi->lock);
-
-	if (!dsi->info.power_saving_suspend) {
-		if (dsi->ulpm) {
-			if (tegra_dsi_exit_ulpm(dsi) < 0) {
-				dev_err(&dc->ndev->dev,
-					"DSI failed to exit ulpm");
-				goto fail;
-			}
-		}
-
-		if (tegra_dsi_deep_sleep(dc, dsi, DSI_SUSPEND_FULL) < 0) {
-			dev_err(&dc->ndev->dev,
-				"DSI failed to enter deep sleep\n");
-			goto fail;
-		}
-	}
-fail:
-	mutex_unlock(&dsi->lock);
-	tegra_dc_io_end(dc);
-}
-
-static void tegra_dc_dsi_resume(struct tegra_dc *dc)
-{
-	/* Not required since tegra_dc_dsi_enable
-	 * will reconfigure the controller from scratch
-	 */
-}
-#endif
-
 static void tegra_dc_send_cmd(struct tegra_dc *dc, struct tegra_dsi_cmd *cmd, int n)
 {
 	struct tegra_dc_dsi_data *dsi;
@@ -3698,9 +3503,5 @@ struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.disable = tegra_dc_dsi_disable,
 	.hold = tegra_dc_dsi_hold_host,
 	.release = tegra_dc_dsi_release_host,
-#ifdef CONFIG_PM
-	.suspend = tegra_dc_dsi_suspend,
-	.resume = tegra_dc_dsi_resume,
-#endif
 	.send_cmd = tegra_dc_send_cmd,
 };
