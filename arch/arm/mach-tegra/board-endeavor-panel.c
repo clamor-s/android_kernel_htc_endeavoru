@@ -243,19 +243,7 @@ struct tegra_dsi_out endeavor_dsi = {
 	.n_data_lanes = 2,
 	.pixel_format = TEGRA_DSI_PIXEL_FORMAT_24BIT_P,
 
-#if (DC_CTRL_MODE & TEGRA_DC_OUT_ONE_SHOT_MODE)
-	/*
-	 * The one-shot frame time must be shorter than the time between TE.
-	 * Increasing refresh_rate will result in a decrease in the frame time
-	 * for one-shot. rated_refresh_rate is only an approximation of the
-	 * TE rate, and is only used to report refresh rate to upper layers.
-	 */
-	.refresh_rate = 66,
-	.rated_refresh_rate = 60,
-#else
 	.refresh_rate = 60,
-#endif
-
 	.virtual_channel = TEGRA_DSI_VIRTUAL_CHANNEL_0,
 
 	.panel_has_frame_buffer = true,
@@ -268,23 +256,23 @@ struct tegra_dsi_out endeavor_dsi = {
 	.dsi_init_cmd = dsi_init_sharp_nt_c2_9a_cmd,
 	.n_init_cmd = ARRAY_SIZE(dsi_init_sharp_nt_c2_9a_cmd),
 
-	.osc_off_cmd = osc_off_cmd,
-	.n_osc_off_cmd = ARRAY_SIZE(osc_off_cmd),
+//	.osc_off_cmd = osc_off_cmd,
+//	.n_osc_off_cmd = ARRAY_SIZE(osc_off_cmd),
 
-	.osc_on_cmd = osc_on_cmd,
-	.n_osc_on_cmd = ARRAY_SIZE(osc_on_cmd),
+//	.osc_on_cmd = osc_on_cmd,
+//	.n_osc_on_cmd = ARRAY_SIZE(osc_on_cmd),
 
-	.dsi_cabc_moving_mode = nt_moving_mode_cmd,
-	.n_cabc_cmd = ARRAY_SIZE(nt_moving_mode_cmd),
+//	.dsi_cabc_moving_mode = nt_moving_mode_cmd,
+//	.n_cabc_cmd = ARRAY_SIZE(nt_moving_mode_cmd),
 
-	.dsi_cabc_still_mode = nt_still_mode_cmd,
+//	.dsi_cabc_still_mode = nt_still_mode_cmd,
 
-	.dsi_cabc_dimming_on_cmd = dimming_on_cmd,
-	.n_cabc_dimming_on_cmd = ARRAY_SIZE(dimming_on_cmd),
+//	.dsi_cabc_dimming_on_cmd = dimming_on_cmd,
+//	.n_cabc_dimming_on_cmd = ARRAY_SIZE(dimming_on_cmd),
 	/* PANEL_ID_SHARP_NT_C2_9A - END*/
 
-	.dsi_suspend_cmd = dsi_suspend_cmd,
-	.n_suspend_cmd = ARRAY_SIZE(dsi_suspend_cmd),
+//	.dsi_suspend_cmd = dsi_suspend_cmd,
+//	.n_suspend_cmd = ARRAY_SIZE(dsi_suspend_cmd),
 
 	.video_data_type = TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE,
 	.video_burst_mode = TEGRA_DSI_VIDEO_NONE_BURST_MODE,
