@@ -2828,15 +2828,6 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 				"dsi: error sending dsi init cmd\n");
 				goto fail;
 			}
-		} else if (dsi->info.dsi_late_resume_cmd) {
-			err = tegra_dsi_send_panel_cmd(dc, dsi,
-						dsi->info.dsi_late_resume_cmd,
-						dsi->info.n_late_resume_cmd);
-			if (err < 0) {
-				dev_err(&dc->ndev->dev,
-				"dsi: error sending late resume cmd\n");
-				goto fail;
-			}
 		}
 	} else {
 		err = tegra_dsi_init_hw(dc, dsi);
@@ -2971,8 +2962,6 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 					struct tegra_dsi_out *p_dsi)
 {
 	struct tegra_dsi_cmd *p_init_cmd = NULL;
-	struct tegra_dsi_cmd *p_early_suspend_cmd = NULL;
-	struct tegra_dsi_cmd *p_late_resume_cmd = NULL;
 	struct tegra_dsi_cmd *p_suspend_cmd = NULL;
 	int err;
 
@@ -2983,26 +2972,6 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 				p_dsi->n_init_cmd, GFP_KERNEL);
 	if (!p_init_cmd)
 		return -ENOMEM;
-
-	if (p_dsi->dsi_early_suspend_cmd) {
-		p_early_suspend_cmd = kzalloc(sizeof(*p_early_suspend_cmd) *
-					p_dsi->n_early_suspend_cmd,
-					GFP_KERNEL);
-		if (!p_early_suspend_cmd) {
-			err = -ENOMEM;
-			goto err_free_init_cmd;
-		}
-	}
-
-	if (p_dsi->dsi_late_resume_cmd) {
-		p_late_resume_cmd = kzalloc(sizeof(*p_late_resume_cmd) *
-					p_dsi->n_late_resume_cmd,
-					GFP_KERNEL);
-		if (!p_late_resume_cmd) {
-			err = -ENOMEM;
-			goto err_free_p_early_suspend_cmd;
-		}
-	}
 
 	p_suspend_cmd = kzalloc(sizeof(*p_suspend_cmd) * p_dsi->n_suspend_cmd,
 				GFP_KERNEL);
@@ -3019,26 +2988,6 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 	if (err < 0)
 		goto err_free;
 	dsi->info.dsi_init_cmd = p_init_cmd;
-
-	/* Copy panel early suspend cmd */
-	if (p_dsi->dsi_early_suspend_cmd) {
-		err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_early_suspend_cmd,
-					p_early_suspend_cmd,
-					p_dsi->n_early_suspend_cmd);
-		if (err < 0)
-			goto err_free;
-		dsi->info.dsi_early_suspend_cmd = p_early_suspend_cmd;
-	}
-
-	/* Copy panel late resume cmd */
-	if (p_dsi->dsi_late_resume_cmd) {
-		err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_late_resume_cmd,
-						p_late_resume_cmd,
-						p_dsi->n_late_resume_cmd);
-		if (err < 0)
-			goto err_free;
-		dsi->info.dsi_late_resume_cmd = p_late_resume_cmd;
-	}
 
 	/* Copy panel suspend cmd */
 	err = tegra_dc_dsi_cp_p_cmd(p_dsi->dsi_suspend_cmd, p_suspend_cmd,
@@ -3084,11 +3033,7 @@ static int tegra_dc_dsi_cp_info(struct tegra_dc_dsi_data *dsi,
 err_free:
 	kfree(p_suspend_cmd);
 err_free_p_late_resume_cmd:
-	if(p_late_resume_cmd)
-		kfree(p_late_resume_cmd);
 err_free_p_early_suspend_cmd:
-	if(p_early_suspend_cmd)
-		kfree(p_early_suspend_cmd);
 err_free_init_cmd:
 	kfree(p_init_cmd);
 	return err;
@@ -3400,17 +3345,6 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 			goto fail;
 		}
 	} else {
-		if (dsi->info.dsi_early_suspend_cmd) {
-			err = tegra_dsi_send_panel_cmd(dc, dsi,
-				dsi->info.dsi_early_suspend_cmd,
-				dsi->info.n_early_suspend_cmd);
-			if (err < 0) {
-				dev_err(&dc->ndev->dev,
-				"dsi: Error sending early suspend cmd\n");
-				goto fail;
-			}
-		}
-
 		if (!dsi->ulpm) {
 			if (tegra_dsi_enter_ulpm(dsi) < 0) {
 				dev_err(&dc->ndev->dev,
