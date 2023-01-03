@@ -131,7 +131,7 @@ struct tegra_dc_dsi_data {
 
 	struct dsi_phy_timing_inclk phy_timing;
 
-	bool ulpm;
+//	bool ulpm;
 	bool enabled;
 	bool host_suspended;
 	struct mutex host_resume_lock;
@@ -512,7 +512,7 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	}
 
 	dsi->controller_index = dc->ndev->id;
-	dsi->ulpm = false;
+//	dsi->ulpm = false;
 	dsi->enabled = false;
 	dsi->clk_ref = false;
 
@@ -1885,8 +1885,7 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 	struct dsi_status *init_status;
 	bool restart_dc_stream = false;
 
-	if (dsi->status.init != DSI_MODULE_INIT ||
-		dsi->ulpm) {
+	if (dsi->status.init != DSI_MODULE_INIT /*|| dsi->ulpm*/) {
 		err = -EPERM;
 		goto fail;
 	}
@@ -2677,6 +2676,7 @@ fail:
 }
 EXPORT_SYMBOL(tegra_dsi_panel_sanity_check);
 
+#if 0
 static int tegra_dsi_enter_ulpm(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
@@ -2738,6 +2738,7 @@ fail:
 	return ret;
 
 }
+#endif
 
 static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
 				     struct tegra_dc_dsi_data *dsi,
@@ -2804,6 +2805,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	tegra_dsi_stop_dc_stream(dc, dsi);
 
 	if (dsi->enabled) {
+#if 0
 		if (dsi->ulpm) {
 			if (tegra_dsi_exit_ulpm(dsi) < 0) {
 				dev_err(&dc->ndev->dev,
@@ -2811,6 +2813,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 				goto fail;
 			}
 		}
+#endif
 
 		if (dsi->info.panel_reset) {
 			/*
@@ -2841,7 +2844,6 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		if (dc->out->bridge_reset) {
 			dc->out->bridge_reset();
 		}
-#endif
 
 		if (dsi->ulpm) {
 			if (tegra_dsi_enter_ulpm(dsi) < 0) {
@@ -2870,7 +2872,6 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			}
 		}
 
-#if 0
 		/*
 		 * Certain panels need dc frames be sent before
 		 * waking panel.
@@ -3226,6 +3227,7 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 			goto fail;
 		}
 	case DSI_HOST_SUSPEND_LV2:
+#if 0
 		/* Set DSI to ULPM and suspend pads. DSI will be set to the
 		 * lowest power state in this level. */
 		if (!dsi->ulpm) {
@@ -3236,6 +3238,7 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 				goto fail;
 			}
 		}
+#endif
 
 		val = DSI_PAD_CONTROL_PAD_PDIO(0x3) |
 			DSI_PAD_CONTROL_PAD_PDIO_CLK(0x1) |
@@ -3296,6 +3299,7 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 			DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
 			DSI_POWER_CONTROL);
 
+#if 0
 		if (dsi->ulpm) {
 			err = tegra_dsi_enter_ulpm(dsi);
 			if (err < 0) {
@@ -3316,6 +3320,7 @@ static int tegra_dsi_host_resume(struct tegra_dc *dc)
 				goto fail;
 			}
 		}
+#endif
 		break;
 	case DSI_NO_SUSPEND:
 		break;
@@ -3350,7 +3355,9 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 				"DSI failed to enter deep sleep\n");
 			goto fail;
 		}
-	} else {
+	}
+#if 0
+	else {
 		if (!dsi->ulpm) {
 			if (tegra_dsi_enter_ulpm(dsi) < 0) {
 				dev_err(&dc->ndev->dev,
@@ -3359,6 +3366,7 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 			}
 		}
 	}
+#endif
 fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);
