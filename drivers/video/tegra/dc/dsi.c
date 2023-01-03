@@ -2837,9 +2837,11 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			goto fail;
 		}
 
+#if 0
 		if (dc->out->bridge_reset) {
 			dc->out->bridge_reset();
 		}
+#endif
 
 		if (dsi->ulpm) {
 			if (tegra_dsi_enter_ulpm(dsi) < 0) {
@@ -2868,12 +2870,14 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			}
 		}
 
+#if 0
 		/*
 		 * Certain panels need dc frames be sent before
 		 * waking panel.
 		 */
 		if (dsi->info.panel_send_dc_frames)
 			tegra_dsi_send_dc_frames(dc, dsi, 2);
+#endif
 
 		err = tegra_dsi_set_to_lp_mode(dc, dsi, DSI_LP_OP_WRITE);
 		if (err < 0) {
@@ -2882,6 +2886,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			goto fail;
 		}
 
+#if 0
 		if ( dsi->info.osc_off_cmd ) {
 			err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.osc_off_cmd,
 								dsi->info.n_osc_off_cmd);
@@ -2903,6 +2908,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		if (dc->out->ic_reset) {
 			dc->out->ic_reset();
 		}
+#endif
 
 		err = tegra_dsi_send_panel_cmd(dc, dsi, dsi->info.dsi_init_cmd,
 						dsi->info.n_init_cmd);
