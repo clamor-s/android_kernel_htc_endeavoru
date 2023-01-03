@@ -44,7 +44,7 @@
 #define APB_MISC_GP_MIPI_PAD_CTRL_0	(TEGRA_APB_MISC_BASE + 0x820)
 #define DSIB_MODE_ENABLE		0x2
 
-#define DSI_USE_SYNC_POINTS		1
+#define DSI_USE_SYNC_POINTS		0
 #define S_TO_MS(x)			(1000 * (x))
 
 #define DSI_MODULE_NOT_INIT		0x0
@@ -334,6 +334,7 @@ static inline void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 
 #define DSI_RETRY 5
 
+#if 0
 static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
@@ -398,6 +399,7 @@ static int tegra_dsi_syncpt(struct tegra_dc_dsi_data *dsi)
 fail:
 	return ret;
 }
+#endif
 
 static u32 tegra_dsi_get_hs_clk_rate(struct tegra_dc_dsi_data *dsi)
 {
@@ -1954,12 +1956,12 @@ static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi)
 		DSI_TRIGGER_HOST_TRIGGER(TEGRA_DSI_ENABLE), DSI_TRIGGER);
 
 #if DSI_USE_SYNC_POINTS
-	status = tegra_dsi_syncpt(dsi);
-	if (status < 0) {
-		dev_err(&dsi->dc->ndev->dev,
-			"DSI syncpt for host trigger failed\n");
-		goto fail;
-	}
+//	status = tegra_dsi_syncpt(dsi);
+//	if (status < 0) {
+//		dev_err(&dsi->dc->ndev->dev,
+//			"DSI syncpt for host trigger failed\n");
+//		goto fail;
+//	}
 #else
 	if (tegra_dsi_write_busy(dsi)) {
 		status = -EBUSY;
