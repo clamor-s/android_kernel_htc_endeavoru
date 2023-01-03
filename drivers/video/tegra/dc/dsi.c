@@ -531,117 +531,20 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->idle_delay = msecs_to_jiffies(DSI_HOST_IDLE_PERIOD);
 }
 
-static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi)
-{
-	/* Generated with mainline code */
-	tegra_dsi_writel(dsi, 0x0e0a1008, DSI_PHY_TIMING_0);
-	tegra_dsi_writel(dsi, 0x090e2007, DSI_PHY_TIMING_1);
-	tegra_dsi_writel(dsi, 0x000700ff, DSI_PHY_TIMING_2);
-	tegra_dsi_writel(dsi, 0x00250e1d, DSI_BTA_TIMING);
-}
 
-static u32 tegra_dsi_sol_delay_burst(struct tegra_dc *dc,
-				struct tegra_dc_dsi_data *dsi)
-{
-	u32 dsi_to_pixel_clk_ratio;
-	u32 temp;
-	u32 temp1;
-	u32 mipi_clk_adj_kHz = 0;
-	u32 sol_delay;
-	struct tegra_dc_mode *dc_modes = &dc->mode;
 
-	/* Get Fdsi/Fpixel ration (note: Fdsi is in bit format) */
-	dsi_to_pixel_clk_ratio = (dsi->current_dsi_clk_khz * 2 +
-		dsi->default_pixel_clk_khz - 1) / dsi->default_pixel_clk_khz;
-
-	/* Convert Fdsi to byte format */
-	dsi_to_pixel_clk_ratio *= 1000/8;
-
-	/* Multiplying by 1000 so that we don't loose the fraction part */
-	temp = dc_modes->h_active * 1000;
-	temp1 = dc_modes->h_active + dc_modes->h_back_porch +
-			dc_modes->h_sync_width;
-
-	sol_delay = temp1 * dsi_to_pixel_clk_ratio -
-			temp * dsi->pixel_scaler_mul /
-			(dsi->pixel_scaler_div * dsi->info.n_data_lanes);
-
-	/* Do rounding on sol delay */
-	sol_delay = (sol_delay + 1000 - 1)/1000;
-
-	/* TODO:
-	 * 1. find out the correct sol fifo depth to use
-	 * 2. verify with hw about the clamping function
-	 */
-	if (sol_delay > (480 * 4)) {
-		sol_delay = (480 * 4);
-		mipi_clk_adj_kHz = sol_delay +
-			(dc_modes->h_active * dsi->pixel_scaler_mul) /
-			(dsi->info.n_data_lanes * dsi->pixel_scaler_div);
-
-		mipi_clk_adj_kHz *= (dsi->default_pixel_clk_khz / temp1);
-
-		mipi_clk_adj_kHz *= 4;
-	}
-
-	dsi->target_hs_clk_khz = mipi_clk_adj_kHz;
-
-	return sol_delay;
-}
 
 static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi)
 {
 	u32 sol_delay;
 
-	if (dsi->info.video_burst_mode == TEGRA_DSI_VIDEO_NONE_BURST_MODE ||
-		dsi->info.video_burst_mode ==
-				TEGRA_DSI_VIDEO_NONE_BURST_MODE_WITH_SYNC_END) {
-#define VIDEO_FIFO_LATENCY_PIXEL_CLK 8
-		sol_delay = VIDEO_FIFO_LATENCY_PIXEL_CLK *
-			dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
-#undef VIDEO_FIFO_LATENCY_PIXEL_CLK
-		dsi->status.clk_burst = DSI_CLK_BURST_NONE_BURST;
-	} else {
-		sol_delay = tegra_dsi_sol_delay_burst(dc, dsi);
-		dsi->status.clk_burst = DSI_CLK_BURST_BURST_MODE;
-	}
+	sol_delay = 8 * dsi->pixel_scaler_mul / dsi->pixel_scaler_div;
+
+	dsi->status.clk_burst = DSI_CLK_BURST_NONE_BURST;
 
 	tegra_dsi_writel(dsi, DSI_SOL_DELAY_SOL_DELAY(sol_delay),
-								DSI_SOL_DELAY);
-}
-
-static void tegra_dsi_set_timeout(struct tegra_dc_dsi_data *dsi)
-{
-	u32 val;
-	u32 bytes_per_frame;
-	u32 timeout = 0;
-
-	/* TODO: verify the following equation */
-	bytes_per_frame = dsi->current_dsi_clk_khz * 1000 * 2 /
-						(dsi->info.refresh_rate * 8);
-	timeout = bytes_per_frame / DSI_CYCLE_COUNTER_VALUE;
-	timeout = (timeout + DSI_HTX_TO_MARGIN) & 0xffff;
-
-	val = DSI_TIMEOUT_0_LRXH_TO(DSI_LRXH_TO_VALUE) |
-			DSI_TIMEOUT_0_HTX_TO(timeout);
-	tegra_dsi_writel(dsi, val, DSI_TIMEOUT_0);
-
-	if (dsi->info.panel_reset_timeout_msec)
-		timeout = (dsi->info.panel_reset_timeout_msec * 1000*1000)
-					/ dsi->current_bit_clk_ns;
-	else
-		timeout = DSI_PR_TO_VALUE;
-
-	val = DSI_TIMEOUT_1_PR_TO(timeout) |
-		DSI_TIMEOUT_1_TA_TO(DSI_TA_TO_VALUE);
-	tegra_dsi_writel(dsi, val, DSI_TIMEOUT_1);
-
-	val = DSI_TO_TALLY_P_RESET_STATUS(IN_RESET) |
-		DSI_TO_TALLY_TA_TALLY(DSI_TA_TALLY_VALUE)|
-		DSI_TO_TALLY_LRXH_TALLY(DSI_LRXH_TALLY_VALUE)|
-		DSI_TO_TALLY_HTX_TALLY(DSI_HTX_TALLY_VALUE);
-	tegra_dsi_writel(dsi, val, DSI_TO_TALLY);
+			 DSI_SOL_DELAY);
 }
 
 static void tegra_dsi_setup_video_mode_pkt_length(struct tegra_dc *dc,
@@ -1126,7 +1029,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		DSI_PAD_CONTROL_PAD_SLEWUPADJ(0x6) |
 		DSI_PAD_CONTROL_PAD_PDIO(0) |
 		DSI_PAD_CONTROL_PAD_PDIO_CLK(0) |
-		DSI_PAD_CONTROL_PAD_PULLDN_ENAB(TEGRA_DSI_DISABLE);
+		DSI_PAD_CONTROL_PAD_PULLDN_ENAB(0);
 	tegra_dsi_writel(dsi, val, DSI_PAD_CONTROL);
 
 	val = MIPI_CAL_TERMOSA(0x4);
@@ -1145,36 +1048,69 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 	tegra_vi_csi_writel(val, CSI_CIL_PAD_CONFIG);
 }
 
+static void tegra_dsi_set_timeout(struct tegra_dc_dsi_data *dsi)
+{
+	unsigned long bclk;
+	u32 val;
+	u32 timeout = 0;
+
+	bclk = (63200000 * 3) / (1 * 2);
+	timeout = (bclk / 60) / 512;
+
+	val = DSI_TIMEOUT_0_LRXH_TO(0x2000) |
+			DSI_TIMEOUT_0_HTX_TO(timeout);
+	tegra_dsi_writel(dsi, val, DSI_TIMEOUT_0);
+
+	/* 2 ms peripheral timeout for panel */
+	timeout = 2 * bclk / 512 * 1000;
+	val = DSI_TIMEOUT_1_PR_TO(timeout) |
+		DSI_TIMEOUT_1_TA_TO(0x2000);
+	tegra_dsi_writel(dsi, val, DSI_TIMEOUT_1);
+
+	val = /*DSI_TO_TALLY_P_RESET_STATUS(IN_RESET) |*/
+		DSI_TO_TALLY_TA_TALLY(0)|
+		DSI_TO_TALLY_LRXH_TALLY(0)|
+		DSI_TO_TALLY_HTX_TALLY(0);
+	tegra_dsi_writel(dsi, val, DSI_TO_TALLY);
+}
+
+static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi)
+{
+	/* Generated with mainline code */
+	tegra_dsi_writel(dsi, 0x0e0a1008, DSI_PHY_TIMING_0);
+	tegra_dsi_writel(dsi, 0x090e2007, DSI_PHY_TIMING_1);
+	tegra_dsi_writel(dsi, 0x000700ff, DSI_PHY_TIMING_2);
+	tegra_dsi_writel(dsi, 0x00250e1d, DSI_BTA_TIMING);
+}
+
 static int tegra_dsi_init_hw(struct tegra_dc *dc,
 						struct tegra_dc_dsi_data *dsi)
 {
 	u32 i;
 
-	tegra_dsi_writel(dsi,
-		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_DISABLE),
-		DSI_POWER_CONTROL);
+	tegra_dsi_writel(dsi, 0, DSI_POWER_CONTROL);
+
 	/* stabilization delay */
 	udelay(300);
 
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
-
-	/* TODO: only need to change the timing for bta */
-	tegra_dsi_set_phy_timing(dsi);
-
-//	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
-//		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
+	pr_err("[DSI]: %s: dsi clk clock %d \n", __func__, clk_get_rate(dsi->dsi_clk));
 
 	/* Initializing DSI registers */
 	for (i = 0; i < ARRAY_SIZE(init_reg); i++)
 		tegra_dsi_writel(dsi, 0, init_reg[i]);
 
-	tegra_dsi_writel(dsi, dsi->dsi_control_val, DSI_CONTROL);
-
 	tegra_dsi_pad_calibration(dsi);
 
-	tegra_dsi_writel(dsi,
-		DSI_POWER_CONTROL_LEG_DSI_ENABLE(TEGRA_DSI_ENABLE),
-		DSI_POWER_CONTROL);
+	tegra_dsi_set_timeout(dsi);
+
+	/* TODO: only need to change the timing for bta */
+	tegra_dsi_set_phy_timing(dsi);
+
+	tegra_dsi_writel(dsi, dsi->dsi_control_val, DSI_CONTROL);
+
+	tegra_dsi_writel(dsi, 1, DSI_POWER_CONTROL);
+
 	/* stabilization delay */
 	udelay(300);
 
@@ -1205,9 +1141,6 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 			dsi->status.lp_op == lp_op)
 		goto success;
 
-	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
-		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
-
 	/* disable/enable hs clk according to enable_hs_clock_on_lp_cmd_mode */
 	if ((dsi->status.clk_out == DSI_PHYCLK_OUT_EN) &&
 		(!dsi->info.enable_hs_clock_on_lp_cmd_mode))
@@ -1216,10 +1149,8 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 	dsi->target_lp_clk_khz = tegra_dsi_get_lp_clk_rate(dsi, lp_op);
 	if (dsi->current_dsi_clk_khz != dsi->target_lp_clk_khz) {
 		tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
-		tegra_dsi_set_timeout(dsi);
+		pr_err("[DSI]: %s: dsi clk clock %d \n", __func__, clk_get_rate(dsi->dsi_clk));
 	}
-
-	tegra_dsi_set_phy_timing(dsi);
 
 	tegra_dsi_set_control_reg_lp(dsi);
 
@@ -1253,19 +1184,14 @@ static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 
 	dsi->driven_mode = driven_mode;
 
-	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
-		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
-
 	if ((dsi->status.clk_out == DSI_PHYCLK_OUT_EN) &&
 		(!dsi->info.enable_hs_clock_on_lp_cmd_mode))
 		tegra_dsi_hs_clk_out_disable(dc, dsi);
 
 	if (dsi->current_dsi_clk_khz != dsi->target_hs_clk_khz) {
 		tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_hs_clk_khz);
-		tegra_dsi_set_timeout(dsi);
+		pr_err("[DSI]: %s: dsi clk clock %d \n", __func__, clk_get_rate(dsi->dsi_clk));
 	}
-
-	tegra_dsi_set_phy_timing(dsi);
 
 	if (driven_mode == TEGRA_DSI_DRIVEN_BY_DC) {
 		tegra_dsi_set_pkt_seq(dc, dsi);
