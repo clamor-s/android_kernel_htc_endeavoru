@@ -596,6 +596,8 @@ static void tegra_dsi_init_sw(struct tegra_dc *dc,
 	dsi->idle_delay = msecs_to_jiffies(DSI_HOST_IDLE_PERIOD);
 }
 
+#if 0
+
 #define SELECT_T_PHY(platform_t_phy_ns, default_phy, clk_ns, hw_inc) ( \
 (platform_t_phy_ns) ? ( \
 ((DSI_CONVERT_T_PHY_NS_TO_T_PHY(platform_t_phy_ns, clk_ns, hw_inc)) < 0 ? 0 : \
@@ -974,41 +976,15 @@ static int tegra_dsi_constraint_phy_timing(struct tegra_dc_dsi_data *dsi,
 fail:
 	return err;
 }
+#endif
 
-static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi, u8 lphs)
+static void tegra_dsi_set_phy_timing(struct tegra_dc_dsi_data *dsi)
 {
-	u32 val;
-	struct dsi_phy_timing_inclk phy_timing = dsi->phy_timing;
-
-	tegra_dsi_get_phy_timing
-		(dsi, &phy_timing, dsi->current_bit_clk_ns, lphs);
-
-	tegra_dsi_constraint_phy_timing(dsi, &phy_timing,
-					dsi->current_bit_clk_ns, lphs);
-
-	val = DSI_PHY_TIMING_0_THSDEXIT(phy_timing.t_hsdexit) |
-			DSI_PHY_TIMING_0_THSTRAIL(phy_timing.t_hstrail) |
-			DSI_PHY_TIMING_0_TDATZERO(phy_timing.t_datzero) |
-			DSI_PHY_TIMING_0_THSPREPR(phy_timing.t_hsprepare);
-	tegra_dsi_writel(dsi, val, DSI_PHY_TIMING_0);
-
-	val = DSI_PHY_TIMING_1_TCLKTRAIL(phy_timing.t_clktrail) |
-			DSI_PHY_TIMING_1_TCLKPOST(phy_timing.t_clkpost) |
-			DSI_PHY_TIMING_1_TCLKZERO(phy_timing.t_clkzero) |
-			DSI_PHY_TIMING_1_TTLPX(phy_timing.t_tlpx);
-	tegra_dsi_writel(dsi, val, DSI_PHY_TIMING_1);
-
-	val = DSI_PHY_TIMING_2_TCLKPREPARE(phy_timing.t_clkprepare) |
-		DSI_PHY_TIMING_2_TCLKPRE(phy_timing.t_clkpre) |
-			DSI_PHY_TIMING_2_TWAKEUP(phy_timing.t_wakeup);
-	tegra_dsi_writel(dsi, val, DSI_PHY_TIMING_2);
-
-	val = DSI_BTA_TIMING_TTAGET(phy_timing.t_taget) |
-			DSI_BTA_TIMING_TTASURE(phy_timing.t_tasure) |
-			DSI_BTA_TIMING_TTAGO(phy_timing.t_tago);
-	tegra_dsi_writel(dsi, val, DSI_BTA_TIMING);
-
-	dsi->phy_timing = phy_timing;
+	/* Generated with mainline code */
+	tegra_dsi_writel(dsi, 0x0e0a1008, DSI_PHY_TIMING_0);
+	tegra_dsi_writel(dsi, 0x090e2007, DSI_PHY_TIMING_1);
+	tegra_dsi_writel(dsi, 0x000700ff, DSI_PHY_TIMING_2);
+	tegra_dsi_writel(dsi, 0x00250e1d, DSI_BTA_TIMING);
 }
 
 static u32 tegra_dsi_sol_delay_burst(struct tegra_dc *dc,
@@ -1630,10 +1606,10 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);
 
 	/* TODO: only need to change the timing for bta */
-	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
+	tegra_dsi_set_phy_timing(dsi);
 
-	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
-		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
+//	if (dsi->status.dc_stream == DSI_DC_STREAM_ENABLE)
+//		tegra_dsi_stop_dc_stream_at_frame_end(dc, dsi);
 
 	/* Initializing DSI registers */
 	for (i = 0; i < ARRAY_SIZE(init_reg); i++)
@@ -1690,7 +1666,7 @@ static int tegra_dsi_set_to_lp_mode(struct tegra_dc *dc,
 		tegra_dsi_set_timeout(dsi);
 	}
 
-	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
+	tegra_dsi_set_phy_timing(dsi);
 
 	tegra_dsi_set_control_reg_lp(dsi);
 
@@ -1736,7 +1712,7 @@ static int tegra_dsi_set_to_hs_mode(struct tegra_dc *dc,
 		tegra_dsi_set_timeout(dsi);
 	}
 
-	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_HS_MODE);
+	tegra_dsi_set_phy_timing(dsi);
 
 	if (driven_mode == TEGRA_DSI_DRIVEN_BY_DC) {
 		tegra_dsi_set_pkt_seq(dc, dsi);
@@ -2820,8 +2796,8 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 			 * Certain panels need dc frames be sent before
 			 * waking panel.
 			 */
-			if (dsi->info.panel_send_dc_frames)
-				tegra_dsi_send_dc_frames(dc, dsi, 2);
+//			if (dsi->info.panel_send_dc_frames)
+//				tegra_dsi_send_dc_frames(dc, dsi, 2);
 
 			err = tegra_dsi_send_panel_cmd(dc, dsi,
 							dsi->info.dsi_init_cmd,
